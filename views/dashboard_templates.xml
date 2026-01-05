@@ -1,0 +1,462 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="market_hub_dashboard" name="Market Hub Dashboard">
+        <t t-call="web.layout">
+            <t t-set="head">
+                <t t-call-assets="web.assets_backend"/>
+                <script src="https://cdn.tailwindcss.com"></script>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script src="https://unpkg.com/feather-icons"></script>
+                <script>
+                    function openAction(actionXmlId, options) {
+                        window.parent.postMessage({
+                            type: 'open_action',
+                            action: actionXmlId,
+                            options: options || {}
+                        }, '*');
+                    }
+
+                    function toggleCustomDate() {
+                        const picker = document.getElementById('customDateRangePicker');
+                        picker.classList.toggle('hidden');
+                    }
+
+                    function applyCustomDate() {
+                        const start = document.getElementById('customStart').value;
+                        const end = document.getElementById('customEnd').value;
+                        if (start &amp;&amp; end) {
+                            window.location.href = `/market_hub/dashboard?range=custom&amp;date_from=${start}&amp;date_to=${end}`;
+                        }
+                    }
+                </script>
+            </t>
+            
+            <div class="bg-gray-50 text-gray-800 min-h-screen font-sans">
+                <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <!-- Context Header -->
+                    <section class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-8 shadow-sm">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                            <div>
+                                <h1 class="text-2xl font-bold text-gray-900">Market Hub Dashboard</h1>
+                                <p class="text-gray-600 flex items-center mt-1">
+                                    <i data-feather="clock" class="w-4 h-4 mr-2"></i>
+                                    Last updated: <span class="font-medium ml-1 animate-pulse">Just now</span>
+                                </p>
+                            </div>
+                            <div class="mt-4 md:mt-0 relative">
+                                <div class="inline-flex bg-white rounded-lg border border-gray-200 p-1 shadow-sm">
+                                    <a href="/market_hub/dashboard?range=7d" t-att-class="'px-3 py-1 rounded-md text-sm font-medium transition-colors ' + ('bg-blue-100 text-blue-700' if range_key == '7d' else 'text-gray-600 hover:bg-gray-50')">7d</a>
+                                    <a href="/market_hub/dashboard?range=30d" t-att-class="'px-3 py-1 rounded-md text-sm font-medium transition-colors ' + ('bg-blue-100 text-blue-700' if range_key == '30d' else 'text-gray-600 hover:bg-gray-50')">30d</a>
+                                    <a href="/market_hub/dashboard?range=90d" t-att-class="'px-3 py-1 rounded-md text-sm font-medium transition-colors ' + ('bg-blue-100 text-blue-700' if range_key == '90d' else 'text-gray-600 hover:bg-gray-50')">90d</a>
+                                    <a href="/market_hub/dashboard?range=ytd" t-att-class="'px-3 py-1 rounded-md text-sm font-medium transition-colors ' + ('bg-blue-100 text-blue-700' if range_key == 'ytd' else 'text-gray-600 hover:bg-gray-50')">YTD</a>
+                                    <button onclick="toggleCustomDate()" t-att-class="'px-3 py-1 rounded-md text-sm font-medium transition-colors ' + ('bg-blue-100 text-blue-700' if range_key == 'custom' else 'text-gray-600 hover:bg-gray-50')">Custom</button>
+                                </div>
+
+                                <!-- Custom Date Picker Dropdown -->
+                                <div id="customDateRangePicker" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 p-4 z-50">
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+                                            <input type="date" id="customStart" class="w-full border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500" t-att-value="start_date"/>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-500 mb-1">End Date</label>
+                                            <input type="date" id="customEnd" class="w-full border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500" t-att-value="end_date"/>
+                                        </div>
+                                        <button onclick="applyCustomDate()" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 text-sm font-medium transition-colors">
+                                            Apply Range
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Financial Pulse -->
+                    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <!-- POS Revenue -->
+                        <div class="bg-blue-50 rounded-xl p-6 shadow-sm border border-blue-100 cursor-pointer hover:shadow-md transition-shadow" onclick="openAction('point_of_sale.action_pos_pos_form', {domain: [['state', 'in', ['paid', 'done', 'invoiced']]]})">
+                            <p class="text-sm text-blue-600 font-medium">POS Revenue</p>
+                            <h3 class="text-3xl font-bold text-blue-900 mt-2"><t t-esc="'{:,.0f}'.format(pos_total)"/> KES</h3>
+                            <div class="mt-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white text-blue-700 border border-blue-200">
+                                    +12%
+                                </span>
+                            </div>
+                            <p class="text-sm text-blue-500 mt-2">Avg ticket: <t t-esc="'{:,.0f}'.format(avg_ticket)"/> KES</p>
+                        </div>
+                        
+                        <!-- Vendor Payouts -->
+                        <div class="bg-purple-50 rounded-xl p-6 shadow-sm border border-purple-100 cursor-pointer hover:shadow-md transition-shadow" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_statement', {additionalContext: {search_default_draft: 1}, domain: [['state', '=', 'draft']]})">
+                            <p class="text-sm text-purple-600 font-medium">Vendor Payouts</p>
+                            <h3 class="text-3xl font-bold text-purple-900 mt-2"><t t-esc="'{:,.0f}'.format(net_payable)"/> KES</h3>
+                            <div class="mt-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white text-purple-700 border border-purple-200">
+                                    <t t-esc="draft_statements"/> draft
+                                </span>
+                            </div>
+                            <p class="text-sm text-purple-500 mt-2">Pending statements</p>
+                        </div>
+                        
+                        <!-- Licensing Risk -->
+                        <div class="bg-orange-50 rounded-xl p-6 shadow-sm border border-orange-100 cursor-pointer hover:shadow-md transition-shadow" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_license', {additionalContext: {search_default_state_active: 1}, domain: [['state', '=', 'active']]})">
+                            <p class="text-sm text-orange-600 font-medium">Licensing Risk</p>
+                            <h3 class="text-3xl font-bold text-orange-900 mt-2"><t t-esc="expiring_count"/> expiring</h3>
+                            <div class="mt-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white text-orange-700 border border-orange-200">
+                                    <t t-if="sample_expiring">
+                                        <t t-esc="(sample_expiring[0].date_end - today).days"/> days
+                                    </t>
+                                    <t t-else="">
+                                        None
+                                    </t>
+                                </span>
+                            </div>
+                            <p class="text-sm text-orange-500 mt-2">Next expiry</p>
+                        </div>
+                        
+                        <!-- Stock Intake -->
+                        <div class="bg-green-50 rounded-xl p-6 shadow-sm border border-green-100 cursor-pointer hover:shadow-md transition-shadow" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_stock_intake_session', {additionalContext: {search_default_pending: 1}, domain: [['state', 'in', ['draft', 'sent', 'vendor_confirm']]]})">
+                            <p class="text-sm text-green-600 font-medium">Stock Intake</p>
+                            <h3 class="text-3xl font-bold text-green-900 mt-2"><t t-esc="intake_total"/> sessions</h3>
+                            <div class="mt-2">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white text-green-700 border border-green-200">
+                                    <t t-esc="intake_pending"/> pending
+                                </span>
+                            </div>
+                            <p class="text-sm text-green-500 mt-2">Validation required</p>
+                        </div>
+                    </section>
+
+                    <!-- Marketplace Activity -->
+                    <section class="mb-8">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-3">
+                            <i data-feather="map" class="w-5 h-5 text-blue-500"></i>
+                            Marketplace Activity
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <t t-foreach="theme_totals" t-as="theme">
+                                <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                                    <h3 class="font-bold text-gray-900 text-lg mb-4 truncate"><t t-esc="theme['name']"/></h3>
+                                    
+                                    <!-- Circular Progress -->
+                                    <div class="flex justify-center mb-6">
+                                        <div class="relative w-24 h-24">
+                                            <svg class="w-full h-full transform -rotate-90">
+                                                <circle cx="48" cy="48" r="40" stroke="currentColor" stroke-width="8" fill="transparent" class="text-gray-100" />
+                                                <circle cx="48" cy="48" r="40" stroke="currentColor" stroke-width="8" fill="transparent" class="text-blue-500" 
+                                                        t-att-stroke-dasharray="251.2" 
+                                                        t-att-stroke-dashoffset="251.2 - (251.2 * theme['percentage'] / 100)" 
+                                                        stroke-linecap="round" />
+                                            </svg>
+                                            <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                                                <span class="text-xl font-bold text-gray-800"><t t-esc="theme['percentage']"/>%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Stats Row -->
+                                    <div class="flex justify-between items-center mb-4">
+                                        <div class="text-center">
+                                            <div class="text-sm font-bold text-gray-900"><t t-esc="theme['spaces']"/></div>
+                                            <div class="text-xs text-gray-500">spaces</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-sm font-bold text-gray-900"><t t-esc="theme['vendors']"/></div>
+                                            <div class="text-xs text-gray-500">vendors</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Footer -->
+                                    <div class="pt-4 border-t border-gray-100">
+                                        <p class="text-xs text-gray-500">
+                                            Top vendor: <span class="font-medium text-gray-700"><t t-esc="theme['top_vendor']"/></span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </t>
+                            <t t-if="not theme_totals">
+                                <div class="col-span-4 text-center py-8 text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
+                                    No activity in this period
+                                </div>
+                            </t>
+                        </div>
+                    </section>
+
+                    <!-- Operational Flow -->
+                    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Licenses & Compliance -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-semibold flex items-center gap-3 text-gray-900">
+                                    <i data-feather="file-text" class="w-5 h-5 text-blue-500"></i>
+                                    Licenses &amp; Compliance
+                                </h3>
+                                <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center text-sm font-medium transition-colors" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_license')">
+                                    <i data-feather="plus" class="w-4 h-4 mr-2"></i>
+                                    Manage
+                                </button>
+                            </div>
+                            
+                            <div class="flex justify-between mb-6">
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-blue-500"><t t-esc="license_counts['active']"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Active</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-gray-400"><t t-esc="license_counts['draft']"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Draft</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-orange-500"><t t-esc="license_counts['expiring']"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Expiring</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-red-500"><t t-esc="license_counts['expired']"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Expired</div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <t t-foreach="sample_expiring" t-as="lic">
+                                    <div class="flex justify-between items-center p-4 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors"
+                                         t-attf-onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_license', {res_id: {{ lic.id }}, views: [[false, 'form']]});">
+                                        <span class="text-gray-800 font-medium"><t t-esc="lic.display_name"/></span>
+                                        <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs font-bold border border-orange-200">
+                                            <t t-esc="lic.date_end"/>
+                                        </span>
+                                    </div>
+                                </t>
+                                <t t-if="not sample_expiring">
+                                    <div class="text-center text-gray-400 text-sm py-2">No licenses expiring soon</div>
+                                </t>
+                            </div>
+                        </div>
+                        
+                        <!-- Stock Intake Flow -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm">
+                            <h3 class="text-lg font-semibold mb-6 flex items-center gap-3 text-gray-900">
+                                <i data-feather="package" class="w-5 h-5 text-green-500"></i>
+                                Stock Intake Flow
+                            </h3>
+                            
+                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-gray-800"><t t-esc="intake_total"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Total</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-red-500"><t t-esc="intake_pending"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Pending</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-green-500"><t t-esc="intake_total - intake_pending"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Stocked</div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <t t-foreach="recent_intakes" t-as="intake">
+                                    <div class="flex items-center cursor-pointer group"
+                                         t-attf-onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_stock_intake_session', {res_id: {{ intake.id }}, views: [[false, 'form']]});">
+                                        <div t-att-class="'w-3 h-3 rounded-full mr-3 ' + ('bg-green-500' if intake.state == 'stocked' else 'bg-red-500')"></div>
+                                        <div class="flex-1 group-hover:bg-gray-50 p-2 rounded-lg transition-colors -ml-2">
+                                            <div class="flex justify-between">
+                                                <span class="font-medium text-gray-800"><t t-esc="intake.name"/></span>
+                                                <span class="text-gray-500 text-xs"><t t-esc="intake.date"/></span>
+                                            </div>
+                                            <div class="text-sm text-gray-500"><t t-esc="intake.theme_id.name or 'No Theme'"/></div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Sales Timeline -->
+                    <section class="bg-white rounded-xl p-6 shadow-sm mb-8">
+                        <h3 class="text-lg font-semibold mb-6 flex items-center gap-3 text-gray-900">
+                            <i data-feather="trending-up" class="w-5 h-5 text-purple-500"></i>
+                            Sales Timeline
+                        </h3>
+                        
+                        <div class="h-64 w-full">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </section>
+
+                    <!-- Settlements & Commissions -->
+                    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Vendor Settlements -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-semibold flex items-center gap-3 text-gray-900">
+                                    <i data-feather="dollar-sign" class="w-5 h-5 text-indigo-500"></i>
+                                    Vendor Settlements
+                                </h3>
+                                <button class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center text-sm font-medium transition-colors" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_settlement_wizard')">
+                                    <i data-feather="zap" class="w-4 h-4 mr-2"></i>
+                                    Run wizard
+                                </button>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                <div class="text-center cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_statement', {domain: [['state', '=', 'draft']]})">
+                                    <div class="text-3xl font-bold text-yellow-500"><t t-esc="settlement_counts['draft']"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Draft</div>
+                                </div>
+                                <div class="text-center cursor-pointer hover:bg-gray-50 rounded-lg p-2 transition-colors" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_statement', {domain: [['state', '=', 'confirmed']]})">
+                                    <div class="text-3xl font-bold text-indigo-500"><t t-esc="settlement_counts['to_invoice']"/></div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">To Invoice</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-3xl font-bold text-green-500">-</div>
+                                    <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Paid</div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <t t-foreach="latest_statements" t-as="stmt">
+                                    <div class="flex justify-between items-center p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                                         t-attf-onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_statement', {res_id: {{ stmt.id }}, views: [[false, 'form']]});">
+                                        <div>
+                                            <div class="font-medium text-gray-800"><t t-esc="stmt.name"/></div>
+                                            <div class="text-sm text-gray-500"><t t-esc="stmt.vendor_id.name"/></div>
+                                        </div>
+                                        <div class="font-bold text-gray-800"><t t-esc="'{:,.0f}'.format(stmt.total_net_payable)"/> KES</div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                        
+                        <!-- Staff Commissions -->
+                        <div class="bg-white rounded-xl p-6 shadow-sm">
+                            <h3 class="text-lg font-semibold mb-6 flex items-center gap-3 text-gray-900">
+                                <i data-feather="users" class="w-5 h-5 text-pink-500"></i>
+                                Staff Commissions
+                            </h3>
+                            
+                            <div class="mb-6">
+                                <div class="text-3xl font-bold text-pink-500"><t t-esc="'{:,.0f}'.format(commission_total)"/> KES</div>
+                                <div class="text-gray-500 text-sm">Yesterday • <t t-esc="commission_staff"/> staff</div>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <t t-if="top_staff">
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="font-medium text-gray-800"><t t-esc="top_staff.employee_id.name"/></span>
+                                            <span class="font-bold text-pink-600"><t t-esc="'{:,.0f}'.format(top_staff.commission_amount)"/> KES</span>
+                                        </div>
+                                        <div class="w-full bg-gray-200 rounded-full h-2">
+                                            <div class="bg-pink-500 h-2 rounded-full" style="width: 100%"></div>
+                                        </div>
+                                        <div class="text-xs text-gray-500 text-right mt-1">Top Performer</div>
+                                    </div>
+                                </t>
+                                <t t-if="not top_staff">
+                                    <div class="text-gray-500 text-sm">No commission data available.</div>
+                                </t>
+                            </div>
+                        </div>
+                    </section>
+                </main>
+
+                <!-- Risk & Exceptions Rail (Sidebar) -->
+                <aside class="fixed right-0 top-0 h-full w-72 bg-white shadow-2xl hidden xl:block p-6 overflow-y-auto border-l border-gray-100 z-50">
+                    <h3 class="text-lg font-semibold mb-6 flex items-center gap-3 text-gray-900">
+                        <i data-feather="alert-circle" class="w-5 h-5 text-red-500"></i>
+                        Risk &amp; Exceptions
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <t t-if="intake_pending > 0">
+                            <div class="flex items-start p-4 bg-red-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_stock_intake_session')">
+                                <i data-feather="alert-triangle" class="w-5 h-5 mr-3 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                <div>
+                                    <div class="font-medium text-red-800">Stock intake stalled</div>
+                                    <div class="text-sm text-red-600"><t t-esc="intake_pending"/> sessions pending</div>
+                                </div>
+                            </div>
+                        </t>
+                        
+                        <t t-if="expiring_count > 0">
+                            <div class="flex items-start p-4 bg-orange-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_license')">
+                                <i data-feather="clock" class="w-5 h-5 mr-3 text-orange-500 flex-shrink-0 mt-0.5"></i>
+                                <div>
+                                    <div class="font-medium text-orange-800">Licenses expiring</div>
+                                    <div class="text-sm text-orange-600"><t t-esc="expiring_count"/> licenses within 30 days</div>
+                                </div>
+                            </div>
+                        </t>
+                        
+                        <t t-if="settlement_counts['draft'] > 0">
+                            <div class="flex items-start p-4 bg-yellow-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_statement')">
+                                <i data-feather="dollar-sign" class="w-5 h-5 mr-3 text-yellow-500 flex-shrink-0 mt-0.5"></i>
+                                <div>
+                                    <div class="font-medium text-yellow-800">Settlements draft</div>
+                                    <div class="text-sm text-yellow-600"><t t-esc="settlement_counts['draft']"/> statements pending</div>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </aside>
+            </div>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (window.feather) {
+                        feather.replace();
+                    }
+                    
+                    // Initialize sales chart
+                    const ctx = document.getElementById('salesChart');
+                    if (ctx) {
+                        const chartData = <t t-raw="sales_chart_json"/>;
+                        new Chart(ctx.getContext('2d'), {
+                            type: 'bar',
+                            data: chartData,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    x: {
+                                        stacked: true,
+                                        grid: {
+                                            display: false
+                                        }
+                                    },
+                                    y: {
+                                        stacked: true,
+                                        beginAtZero: true,
+                                        ticks: {
+                                            callback: function(value) {
+                                                return value / 1000 + 'K';
+                                            }
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            usePointStyle: true,
+                                            boxWidth: 8
+                                        }
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return context.dataset.label + ': ' + context.raw.toLocaleString() + ' KES';
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+            </script>
+        </t>
+    </template>
+</odoo>

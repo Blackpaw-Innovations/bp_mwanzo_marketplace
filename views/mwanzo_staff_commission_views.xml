@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Commission Policies -->
+    <record id="view_mwanzo_staff_commission_policy_tree" model="ir.ui.view">
+        <field name="name">mwanzo.staff.commission.policy.tree</field>
+        <field name="model">mwanzo.staff.commission.policy</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="role"/>
+                <field name="default_daily_target"/>
+                <field name="default_commission_rate"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_staff_commission_policy_form" model="ir.ui.view">
+        <field name="name">mwanzo.staff.commission.policy.form</field>
+        <field name="model">mwanzo.staff.commission.policy</field>
+        <field name="arch" type="xml">
+            <form string="Staff Commission Policy">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="role"/>
+                        <field name="default_daily_target"/>
+                        <field name="default_commission_rate"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_staff_commission_policy_search" model="ir.ui.view">
+        <field name="name">mwanzo.staff.commission.policy.search</field>
+        <field name="model">mwanzo.staff.commission.policy</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="role"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_staff_commission_policy" model="ir.actions.act_window">
+        <field name="name">Staff Commission Policies</field>
+        <field name="res_model">mwanzo.staff.commission.policy</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_mwanzo_staff_commission_policy_search"/>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <!-- Commission Ledger -->
+    <record id="view_mwanzo_staff_commission_ledger_tree" model="ir.ui.view">
+        <field name="name">mwanzo.staff.commission.ledger.tree</field>
+        <field name="model">mwanzo.staff.commission.ledger</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="employee_id"/>
+                <field name="date"/>
+                <field name="total_sales"/>
+                <field name="target_amount"/>
+                <field name="commission_rate"/>
+                <field name="commission_amount"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_staff_commission_ledger_form" model="ir.ui.view">
+        <field name="name">mwanzo.staff.commission.ledger.form</field>
+        <field name="model">mwanzo.staff.commission.ledger</field>
+        <field name="arch" type="xml">
+            <form string="Staff Commission Ledger">
+                <sheet>
+                    <group>
+                        <field name="employee_id"/>
+                        <field name="date"/>
+                        <field name="total_sales"/>
+                        <field name="target_amount"/>
+                        <field name="commission_rate"/>
+                        <field name="commission_amount"/>
+                        <field name="state"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_staff_commission_ledger_search" model="ir.ui.view">
+        <field name="name">mwanzo.staff.commission.ledger.search</field>
+        <field name="model">mwanzo.staff.commission.ledger</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="employee_id"/>
+                <field name="date"/>
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Confirmed" name="confirmed" domain="[('state', '=', 'confirmed')]"/>
+                <filter string="Paid" name="paid" domain="[('state', '=', 'paid')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_staff_commission_ledger" model="ir.actions.act_window">
+        <field name="name">Staff Commission Ledger</field>
+        <field name="res_model">mwanzo.staff.commission.ledger</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_mwanzo_staff_commission_ledger_search"/>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+</odoo>

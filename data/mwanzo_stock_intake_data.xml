@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Stock Intake Stages -->
+        <record id="stage_intake_draft" model="mwanzo.stock.intake.stage">
+            <field name="name">Draft</field>
+            <field name="sequence">10</field>
+            <field name="target_state">draft</field>
+        </record>
+
+        <record id="stage_intake_sent" model="mwanzo.stock.intake.stage">
+            <field name="name">Request Sent</field>
+            <field name="sequence">20</field>
+            <field name="target_state">sent</field>
+        </record>
+
+        <record id="stage_intake_confirmed" model="mwanzo.stock.intake.stage">
+            <field name="name">Confirmed</field>
+            <field name="sequence">30</field>
+            <field name="target_state">vendor_confirm</field>
+        </record>
+
+        <record id="stage_intake_received" model="mwanzo.stock.intake.stage">
+            <field name="name">Received</field>
+            <field name="sequence">40</field>
+            <field name="target_state">stocked</field>
+            <field name="fold" eval="True"/>
+        </record>
+    </data>
+</odoo>

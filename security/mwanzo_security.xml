@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="module_category_mwanzo" model="ir.module.category">
+        <field name="name">Market Hub</field>
+        <field name="description">Manage Market Hub access rights.</field>
+        <field name="sequence">10</field>
+    </record>
+
+    <record id="group_mwanzo_user" model="res.groups">
+        <field name="name">Mwanzo User</field>
+        <field name="category_id" ref="module_category_mwanzo"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <record id="group_mwanzo_manager" model="res.groups">
+        <field name="name">Mwanzo Manager</field>
+        <field name="category_id" ref="module_category_mwanzo"/>
+        <field name="implied_ids" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_user'))]"/>
+    </record>
+</odoo>

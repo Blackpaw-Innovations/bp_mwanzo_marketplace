@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="email_template_mwanzo_stock_intake" model="mail.template">
+            <field name="name">Stock Intake Request: Send by Email</field>
+            <field name="model_id" ref="bp_mwanzo_marketplace.model_mwanzo_stock_intake_session"/>
+            <field name="report_template_id" ref="action_report_mwanzo_stock_intake"/>
+            <field name="report_name">Stock_Intake_{{ (object.name or '').replace('/','_') }}</field>
+            <field name="subject">Stock Replenishment Request - {{ object.name }}</field>
+            <field name="email_from">{{ (object.company_id.email or user.email_formatted) }}</field>
+            <field name="partner_to">{{ object.vendor_id.id }}</field>
+            <field name="description">Sent to vendor to request stock replenishment</field>
+            <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        Dear <t t-out="object.vendor_id.name or ''">Vendor</t>,
+        <br/><br/>
+        We are requesting replenishment for the following items for your stock intake session <strong><t t-out="object.name or ''">INTAKE-001</t></strong>.
+        <br/><br/>
+        <strong>Date:</strong> <t t-out="object.date or ''">2023-01-01</t>
+        <br/><br/>
+        <table border="1" style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr>
+                    <th style="padding: 5px; text-align: left;">Product</th>
+                    <th style="padding: 5px; text-align: right;">Expected Qty</th>
+                    <th style="padding: 5px; text-align: left;">UoM</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr t-foreach="object.line_ids" t-as="line">
+                    <td style="padding: 5px;"><t t-out="line.product_id.display_name or ''">Product A</t></td>
+                    <td style="padding: 5px; text-align: right;"><t t-out="line.expected_qty or 0.0">10.0</t></td>
+                    <td style="padding: 5px;"><t t-out="line.uom_id.name or ''">Units</t></td>
+                </tr>
+            </tbody>
+        </table>
+        <br/><br/>
+        Please confirm availability and delivery date.
+        <br/><br/>
+        Best regards,
+        <br/>
+        <t t-out="object.company_id.name or ''">My Company</t>
+    </p>
+</div>
+            </field>
+        </record>
+    </data>
+</odoo>

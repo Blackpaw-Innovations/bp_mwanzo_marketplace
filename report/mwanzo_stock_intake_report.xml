@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_mwanzo_stock_intake" model="ir.actions.report">
+        <field name="name">Stock Intake Session</field>
+        <field name="model">mwanzo.stock.intake.session</field>
+        <field name="report_type">qweb-html</field>
+        <field name="report_name">bp_mwanzo_marketplace.report_stock_intake_session</field>
+        <field name="report_file">bp_mwanzo_marketplace.report_stock_intake_session</field>
+        <field name="print_report_name">'Stock Intake - %s' % (object.name).replace('/', '')</field>
+        <field name="binding_model_id" ref="model_mwanzo_stock_intake_session"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_stock_intake_session">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-family: 'Roboto', sans-serif; color: #333;">
+                        <div class="oe_structure"/>
+                        
+                        <!-- Header Section -->
+                        <div class="row mb-5">
+                            <div class="col-6">
+                                <h5 class="text-uppercase text-muted mb-3" style="font-weight: 600; letter-spacing: 1px;">Vendor Details</h5>
+                                <div class="p-3 bg-light rounded border">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fa fa-user-circle fa-lg text-primary me-2"></i>
+                                        <span class="h5 mb-0" t-field="o.vendor_id.name"/>
+                                    </div>
+                                    <div class="ps-4 ms-1 text-muted small">
+                                        <div t-if="o.vendor_id.street"><i class="fa fa-map-marker me-2"></i><span t-field="o.vendor_id.street"/></div>
+                                        <div t-if="o.vendor_id.street2" class="ms-4"><span t-field="o.vendor_id.street2"/></div>
+                                        <div class="ms-4">
+                                            <span t-if="o.vendor_id.city" t-field="o.vendor_id.city"/> 
+                                            <span t-if="o.vendor_id.state_id" t-field="o.vendor_id.state_id.code"/> 
+                                            <span t-if="o.vendor_id.zip" t-field="o.vendor_id.zip"/>
+                                        </div>
+                                        <div t-if="o.vendor_id.country_id" class="ms-4"><span t-field="o.vendor_id.country_id.name"/></div>
+                                        <div t-if="o.vendor_id.phone" class="mt-1"><i class="fa fa-phone me-2"></i><span t-field="o.vendor_id.phone"/></div>
+                                        <div t-if="o.vendor_id.email"><i class="fa fa-envelope me-2"></i><span t-field="o.vendor_id.email"/></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-end">
+                                <h2 class="text-primary mb-1" style="font-weight: 700;">Stock Intake</h2>
+                                <h4 class="text-muted mb-4" t-field="o.name"/>
+                                
+                                <div t-if="o.theme_id" class="mb-3">
+                                    <span class="badge rounded-pill bg-info text-dark p-2 px-3">
+                                        <i class="fa fa-paint-brush me-1"></i> <span t-field="o.theme_id.name"/>
+                                    </span>
+                                </div>
+                                
+                                <div class="row justify-content-end">
+                                    <div class="col-auto text-start">
+                                        <div class="mb-2">
+                                            <span class="text-muted text-uppercase small fw-bold">Date</span><br/>
+                                            <span class="h6" t-field="o.date"/>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted text-uppercase small fw-bold">Status</span><br/>
+                                            <span class="badge bg-secondary" t-field="o.state"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Products Table -->
+                        <div class="mt-5">
+                            <h5 class="text-uppercase text-muted mb-3" style="font-weight: 600; letter-spacing: 1px;">Product Lines</h5>
+                            <table class="table table-hover o_main_table" style="border-bottom: 2px solid #dee2e6;">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th name="th_product" class="text-start py-3" style="font-weight: 600; color: #555;">Product</th>
+                                        <th name="th_quantity" class="text-end py-3" style="font-weight: 600; color: #555;">Expected Qty</th>
+                                        <th name="th_uom" class="text-start py-3 ps-4" style="font-weight: 600; color: #555;">UoM</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="o.line_ids" t-as="line">
+                                        <td name="td_product" class="py-3 align-middle">
+                                            <span class="fw-bold text-dark" t-field="line.product_id.display_name"/>
+                                        </td>
+                                        <td name="td_quantity" class="text-end py-3 align-middle">
+                                            <span class="badge bg-light text-dark border" style="font-size: 1em;" t-field="line.expected_qty"/>
+                                        </td>
+                                        <td name="td_uom" class="py-3 ps-4 align-middle text-muted">
+                                            <span t-field="line.uom_id.name"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Footer Notes -->
+                        <div class="row mt-5" t-if="o.company_id.mwanzo_store_location_id">
+                            <div class="col-12">
+                                <div class="alert alert-light border" role="alert">
+                                    <i class="fa fa-info-circle me-2 text-primary"></i>
+                                    <strong>Delivery Location:</strong> <span t-field="o.company_id.mwanzo_store_location_id.display_name"/>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="oe_structure"/>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

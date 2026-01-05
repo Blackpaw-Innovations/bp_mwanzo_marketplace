@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_mwanzo_stock_intake_session_kanban" model="ir.ui.view">
+        <field name="name">mwanzo.stock.intake.session.kanban</field>
+        <field name="model">mwanzo.stock.intake.session</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="stage_id" class="o_kanban_small_column" quick_create="false">
+                <field name="stage_id"/>
+                <field name="name"/>
+                <field name="vendor_id"/>
+                <field name="theme_id"/>
+                <field name="date"/>
+                <field name="state"/>
+                <field name="picking_count"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click oe_kanban_card d-flex flex-column p-2">
+                            <div class="o_kanban_card_header mb-2">
+                                <div class="o_kanban_card_header_title">
+                                    <div class="h5 mb-0 text-primary fw-bold">
+                                        <field name="name"/>
+                                    </div>
+                                    <div class="small text-muted mt-1">
+                                        <i class="fa fa-user me-1" title="Vendor"/> <field name="vendor_id"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="o_kanban_card_content flex-grow-1">
+                                <div class="row g-0 mb-1 align-items-center">
+                                    <div class="col-6 text-truncate">
+                                        <i class="fa fa-calendar me-2" title="Date"/>
+                                        <field name="date"/>
+                                    </div>
+                                    <div class="col-6 text-end" t-if="record.theme_id.raw_value">
+                                        <span class="badge bg-info"><field name="theme_id"/></span>
+                                    </div>
+                                </div>
+                                <div class="mt-2" t-if="record.picking_count.raw_value > 0">
+                                    <span class="badge text-bg-success">
+                                        <i class="fa fa-truck me-1"/> <field name="picking_count"/> Delivery
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_stock_intake_session_tree" model="ir.ui.view">
+        <field name="name">mwanzo.stock.intake.session.tree</field>
+        <field name="model">mwanzo.stock.intake.session</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="vendor_id"/>
+                <field name="theme_id"/>
+                <field name="date"/>
+                <field name="state" column_invisible="True"/>
+                <field name="stage_id" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'sent'" decoration-success="state == 'stocked'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_stock_intake_stage_tree" model="ir.ui.view">
+        <field name="name">mwanzo.stock.intake.stage.tree</field>
+        <field name="model">mwanzo.stock.intake.stage</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="target_state"/>
+                <field name="fold"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_stock_intake_stage" model="ir.actions.act_window">
+        <field name="name">Intake Session Stages</field>
+        <field name="res_model">mwanzo.stock.intake.stage</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_stock_intake_stage"
+        name="Intake Session Stages"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_config_stages"
+        action="action_mwanzo_stock_intake_stage"
+        sequence="60"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <record id="view_mwanzo_stock_intake_session_form" model="ir.ui.view">
+        <field name="name">mwanzo.stock.intake.session.form</field>
+        <field name="model">mwanzo.stock.intake.session</field>
+        <field name="arch" type="xml">
+            <form string="Stock Intake Session">
+                <header>
+                    <button
+                        name="action_send_email"
+                        type="object"
+                        string="Send by Email"
+                        invisible="state not in ('draft', 'sent')"
+                        class="btn-primary"
+                    />
+                    <button
+                        name="action_vendor_confirm"
+                        type="object"
+                        string="Confirm Order"
+                        invisible="state not in ('draft', 'sent')"
+                        class="btn-secondary"
+                    />
+                    <button
+                        name="action_receive_items"
+                        type="object"
+                        string="Receive Products"
+                        invisible="state != 'vendor_confirm'"
+                        class="btn-primary"
+                    />
+                    <field name="state" invisible="1"/>
+                    <field name="stage_id" widget="statusbar" options="{'clickable': '1', 'fold_field': 'fold'}"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button
+                            name="action_view_pickings"
+                            type="object"
+                            class="oe_stat_button"
+                            icon="fa-truck"
+                            invisible="picking_count == 0"
+                        >
+                            <field name="picking_count" widget="statinfo" string="Delivery"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <span class="o_form_label">Intake Session</span>
+                        <h1>
+                            <field name="name" readonly="1" placeholder="New"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Vendor Details" name="vendor_details">
+                            <field name="vendor_id" widget="res_partner_many2one" context="{'show_address': 1}" options="{'always_reload': True}"/>
+                            <field name="theme_id" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Logistics" name="logistics">
+                            <field name="date"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Products" name="products">
+                            <field name="line_ids" widget="section_and_note_one2many" mode="tree">
+                                <tree editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="expected_qty"/>
+                                    <field name="received_qty"/>
+                                    <field name="uom_id" groups="uom.group_uom"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_stock_intake_session_search" model="ir.ui.view">
+        <field name="name">mwanzo.stock.intake.session.search</field>
+        <field name="model">mwanzo.stock.intake.session</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="vendor_id"/>
+                <field name="theme_id"/>
+                <field name="date"/>
+                <filter string="Pending" name="pending" domain="[('state', 'in', ['draft', 'sent', 'vendor_confirm'])]"/>
+                <filter string="Draft" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Vendor Confirmed" name="vendor_confirm" domain="[('state', '=', 'vendor_confirm')]"/>
+                <filter string="Stocked" name="stocked" domain="[('state', '=', 'stocked')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_stock_intake_session" model="ir.actions.act_window">
+        <field name="name">Stock Intake Sessions</field>
+        <field name="res_model">mwanzo.stock.intake.session</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="search_view_id" ref="view_mwanzo_stock_intake_session_search"/>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_stock_intake_session"
+        name="Stock Intakes"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_operations"
+        action="bp_mwanzo_marketplace.action_mwanzo_stock_intake_session"
+        sequence="20"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+</odoo>

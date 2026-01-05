@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="ir_cron_mwanzo_license_state" model="ir.cron">
+        <field name="name">Mwanzo License State Update</field>
+        <field name="model_id" ref="bp_mwanzo_marketplace.model_mwanzo_vendor_license"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_update_license_states()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="numbercall">-1</field>
+        <field name="doall">False</field>
+        <field name="active">True</field>
+        <field name="cron_name">mwanzo_license_state_update</field>
+        <field name="nextcall" eval="(DateTime.now() + relativedelta(hours=0, minutes=30)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+    <record id="ir_cron_mwanzo_license_recurring_invoice" model="ir.cron">
+        <field name="name">Mwanzo License Recurring Invoice</field>
+        <field name="model_id" ref="bp_mwanzo_marketplace.model_mwanzo_vendor_license"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_generate_recurring_invoices()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="numbercall">-1</field>
+        <field name="doall">False</field>
+        <field name="active">True</field>
+        <field name="cron_name">mwanzo_license_recurring_invoice</field>
+        <field name="nextcall" eval="(DateTime.now() + relativedelta(hours=1)).strftime('%Y-%m-%d %H:%M:%S')"/>
+    </record>
+</odoo>

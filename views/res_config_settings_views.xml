@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.mwanzo</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="90"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Market Hub" string="Market Hub" name="bp_mwanzo_marketplace">
+                    <block title="Marketplace Settings" name="marketplace_settings">
+                        <setting id="mwanzo_store_location" help="Set the default location for vendor consignment intake.">
+                            <field name="mwanzo_store_location_id"/>
+                        </setting>
+                        <setting id="mwanzo_license_product" help="Set the product used for license fee invoices.">
+                            <field name="mwanzo_license_product_id"/>
+                        </setting>
+                        <setting id="mwanzo_hr_addon" help="Enable HR &amp; Performance menus and staff commission scheduler.">
+                            <field name="module_bp_mwanzo_marketplace_hr"/>
+                        </setting>
+                    </block>
+                    <block title="Default POS Configuration" name="pos_default_settings">
+                        <setting id="mwanzo_pos_picking_type" help="Default Operation Type for Theme POS Shops">
+                            <field name="mwanzo_pos_picking_type_id"/>
+                        </setting>
+                        <setting id="mwanzo_pos_journal" help="Default Sales Journal for Theme POS Shops">
+                            <field name="mwanzo_pos_journal_id"/>
+                        </setting>
+                        <setting id="mwanzo_pos_invoice_journal" help="Default Invoice Journal for Theme POS Shops">
+                            <field name="mwanzo_pos_invoice_journal_id"/>
+                        </setting>
+                        <setting id="mwanzo_pos_payment_methods" help="Default Payment Methods for Theme POS Shops">
+                            <field name="mwanzo_pos_payment_method_ids" widget="many2many_tags"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

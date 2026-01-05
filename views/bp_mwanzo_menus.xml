@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <menuitem
+        id="menu_mwanzo_marketplace_root"
+        name="Market Hub"
+        sequence="60"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+        web_icon="bp_mwanzo_marketplace,static/description/icon.png"
+    />
+    <menuitem
+        id="menu_mwanzo_marketplace_configuration"
+        name="Configuration"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_root"
+        sequence="100"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <!-- Configuration Sub-Parents -->
+    <menuitem
+        id="menu_mwanzo_config_market"
+        name="Market Setup"
+        parent="menu_mwanzo_marketplace_configuration"
+        sequence="10"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+    <menuitem
+        id="menu_mwanzo_config_stages"
+        name="Pipeline Stages"
+        parent="menu_mwanzo_marketplace_configuration"
+        sequence="20"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+    <menuitem
+        id="menu_mwanzo_config_automation"
+        name="Automation"
+        parent="menu_mwanzo_marketplace_configuration"
+        sequence="30"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <menuitem
+        id="menu_mwanzo_marketplace_operations"
+        name="Operations"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_root"
+        sequence="20"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+    <menuitem
+        id="menu_mwanzo_marketplace_products"
+        name="Products"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_operations"
+        action="product.product_normal_action_sell"
+        sequence="30"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+    <menuitem
+        id="menu_mwanzo_marketplace_accounting"
+        name="Accounting"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_root"
+        sequence="30"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+    <menuitem
+        id="menu_mwanzo_marketplace_reporting"
+        name="Reporting"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_root"
+        sequence="40"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <record id="action_mwanzo_license_cron" model="ir.actions.act_window">
+        <field name="name">Scheduler: Recurring Invoices</field>
+        <field name="res_model">ir.cron</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" ref="bp_mwanzo_marketplace.ir_cron_mwanzo_license_recurring_invoice"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_license_cron"
+        name="Scheduler: Recurring Invoices"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_config_automation"
+        action="action_mwanzo_license_cron"
+        sequence="10"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <record id="action_mwanzo_stock_intake_cron" model="ir.actions.act_window">
+        <field name="name">Scheduler: Auto-Intake</field>
+        <field name="res_model">ir.cron</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" ref="bp_mwanzo_marketplace.ir_cron_mwanzo_auto_intake"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_stock_intake_cron"
+        name="Scheduler: Auto-Intake"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_config_automation"
+        action="action_mwanzo_stock_intake_cron"
+        sequence="20"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <record id="action_mwanzo_config_settings" model="ir.actions.act_window">
+        <field name="name">Settings</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module' : 'bp_mwanzo_marketplace'}</field>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_config_settings"
+        name="Settings"
+        parent="menu_mwanzo_marketplace_configuration"
+        sequence="0"
+        action="action_mwanzo_config_settings"
+        groups="base.group_system"
+    />
+</odoo>

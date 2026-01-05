@@ -1,0 +1,774 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Themes -->
+    <record id="view_mwanzo_market_theme_kanban" model="ir.ui.view">
+        <field name="name">mwanzo.market.theme.kanban</field>
+        <field name="model">mwanzo.market.theme</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="stage_id" class="o_kanban_small_column" quick_create="false">
+                <field name="stage_id"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="state"/>
+                <field name="event_count"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click oe_kanban_card d-flex flex-column p-2">
+                            <!-- Header: Theme Name & Code -->
+                            <div class="o_kanban_card_header mb-2">
+                                <div class="o_kanban_card_header_title">
+                                    <div class="h5 mb-0 text-primary fw-bold">
+                                        <field name="name"/>
+                                    </div>
+                                    <div class="small text-muted mt-1" t-if="record.code.raw_value">
+                                        <i class="fa fa-hashtag me-1" title="Code"/> <field name="code"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Body: Details with Icons -->
+                            <div class="o_kanban_card_content flex-grow-1">
+                                <div class="d-flex align-items-center mb-2 text-muted small">
+                                    <i class="fa fa-calendar me-2" title="Duration"/>
+                                    <span>
+                                        <field name="date_start"/> 
+                                        <i class="fa fa-long-arrow-right mx-1" title="to"/> 
+                                        <field name="date_end"/>
+                                    </span>
+                                </div>
+                                <div class="mt-2" t-if="record.event_count.raw_value">
+                                    <span class="badge text-bg-info">
+                                        <field name="event_count"/> Events
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_market_theme_tree" model="ir.ui.view">
+        <field name="name">mwanzo.market.theme.tree</field>
+        <field name="model">mwanzo.market.theme</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_market_theme_form" model="ir.ui.view">
+        <field name="name">mwanzo.market.theme.form</field>
+        <field name="model">mwanzo.market.theme</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_set_active" string="Activate" type="object" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_set_closed" string="Close" type="object" class="btn-secondary" invisible="state != 'active'"/>
+                    <button name="action_reset_draft" string="Reset to Draft" type="object" class="btn-secondary" invisible="state == 'draft'"/>
+                    <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1>
+                            <field name="name" placeholder="e.g. Summer Festival 2025" readonly="state == 'closed'"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Theme Details">
+                            <field name="code" readonly="state == 'closed'"/>
+                            <field name="active" invisible="1"/>
+                            <field name="state" invisible="1"/>
+                        </group>
+                        <group string="Duration">
+                            <field name="date_start" readonly="state == 'closed'"/>
+                            <field name="date_end" readonly="state == 'closed'"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Description">
+                            <field name="description" placeholder="Describe the theme..." readonly="state == 'closed'"/>
+                        </page>
+                        <page string="Vendor Licenses">
+                            <field name="vendor_ids" readonly="state == 'closed'">
+                                <tree editable="bottom">
+                                    <field name="vendor_id"/>
+                                    <field name="license_type"/>
+                                    <field name="date_start"/>
+                                    <field name="date_end"/>
+                                    <field name="license_fee"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Events">
+                            <field name="event_ids">
+                                <tree editable="bottom">
+                                    <field name="name"/>
+                                    <field name="date_begin"/>
+                                    <field name="date_end"/>
+                                    <field name="stage_id"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="POS Configuration">
+                            <group>
+                                <group string="Shop Settings">
+                                    <field name="pos_config_id"/>
+                                </group>
+                                <group string="Access">
+                                    <field name="pos_sales_associate_ids" widget="many2many_tags" readonly="state == 'closed'"/>
+                                    <field name="pos_cashier_ids" widget="many2many_tags" readonly="state == 'closed'"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_market_theme_search" model="ir.ui.view">
+        <field name="name">mwanzo.market.theme.search</field>
+        <field name="model">mwanzo.market.theme</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_market_theme" model="ir.actions.act_window">
+        <field name="name">Themes</field>
+        <field name="res_model">mwanzo.market.theme</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="search_view_id" ref="view_mwanzo_market_theme_search"/>
+        <field name="domain">[]</field>
+        <field name="context">{}</field>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_market_theme"
+        name="Market Themes"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_operations"
+        action="bp_mwanzo_marketplace.action_mwanzo_market_theme"
+        sequence="10"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <!-- Theme Stages -->
+    <record id="view_mwanzo_theme_stage_tree" model="ir.ui.view">
+        <field name="name">mwanzo.theme.stage.tree</field>
+        <field name="model">mwanzo.theme.stage</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="target_state"/>
+                <field name="fold"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_theme_stage_form" model="ir.ui.view">
+        <field name="name">mwanzo.theme.stage.form</field>
+        <field name="model">mwanzo.theme.stage</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="target_state"/>
+                            <field name="fold"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_theme_stage" model="ir.actions.act_window">
+        <field name="name">Theme Stages</field>
+        <field name="res_model">mwanzo.theme.stage</field>
+        <field name="view_mode">tree,form</field>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_theme_stage"
+        name="Theme Stages"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_config_stages"
+        action="action_mwanzo_theme_stage"
+        sequence="10"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <!-- Market Spaces -->
+    <record id="view_mwanzo_market_space_kanban" model="ir.ui.view">
+        <field name="name">mwanzo.market.space.kanban</field>
+        <field name="model">mwanzo.market.space</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="stage_id" class="o_kanban_small_column" sample="1" quick_create="false">
+                <field name="stage_id"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="space_type"/>
+                <field name="theme_id"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click oe_kanban_card d-flex flex-column p-2">
+                            <div class="o_kanban_card_header mb-2">
+                                <div class="o_kanban_card_header_title">
+                                    <div class="h5 mb-0 text-primary fw-bold">
+                                        <field name="name"/>
+                                    </div>
+                                    <div class="small text-muted mt-1" t-if="record.code.raw_value">
+                                        <i class="fa fa-hashtag me-1" title="Code"/> <field name="code"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="o_kanban_card_content flex-grow-1">
+                                <div class="d-flex align-items-center mb-2 text-muted small">
+                                    <i class="fa fa-building me-2" title="Type"/>
+                                    <field name="space_type"/>
+                                </div>
+                                <div class="d-flex align-items-center mb-2 text-muted small" t-if="record.theme_id.raw_value">
+                                    <i class="fa fa-paint-brush me-2" title="Theme"/>
+                                    <field name="theme_id"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_market_space_tree" model="ir.ui.view">
+        <field name="name">mwanzo.market.space.tree</field>
+        <field name="model">mwanzo.market.space</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="space_type"/>
+                <field name="theme_id"/>
+                <field name="stage_id"/>
+                <field name="active" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_market_space_form" model="ir.ui.view">
+        <field name="name">mwanzo.market.space.form</field>
+        <field name="model">mwanzo.market.space</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only"/>
+                        <h1>
+                            <field name="name" placeholder="e.g. Karen Square"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Space Details">
+                            <field name="code"/>
+                            <field name="space_type"/>
+                            <field name="theme_id"/>
+                        </group>
+                        <group string="Configuration">
+                            <field name="capacity_notes"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_market_space_search" model="ir.ui.view">
+        <field name="name">mwanzo.market.space.search</field>
+        <field name="model">mwanzo.market.space</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="space_type"/>
+                <field name="theme_id"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_market_space" model="ir.actions.act_window">
+        <field name="name">Market Spaces</field>
+        <field name="res_model">mwanzo.market.space</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="search_view_id" ref="view_mwanzo_market_space_search"/>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_market_space"
+        name="Market Spaces"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_operations"
+        action="bp_mwanzo_marketplace.action_mwanzo_market_space"
+        sequence="20"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <!-- Market Space Stages -->
+    <record id="view_mwanzo_market_space_stage_tree" model="ir.ui.view">
+        <field name="name">mwanzo.market.space.stage.tree</field>
+        <field name="model">mwanzo.market.space.stage</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="fold"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_market_space_stage_form" model="ir.ui.view">
+        <field name="name">mwanzo.market.space.stage.form</field>
+        <field name="model">mwanzo.market.space.stage</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="fold"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_market_space_stage" model="ir.actions.act_window">
+        <field name="name">Market Space Stages</field>
+        <field name="res_model">mwanzo.market.space.stage</field>
+        <field name="view_mode">tree,form</field>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_market_space_stage"
+        name="Market Space Stages"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_config_stages"
+        action="action_mwanzo_market_space_stage"
+        sequence="20"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <!-- Commission Rules -->
+    <record id="view_mwanzo_commission_rule_tree" model="ir.ui.view">
+        <field name="name">mwanzo.commission.rule.tree</field>
+        <field name="model">mwanzo.commission.rule</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="product_category_id"/>
+                <field name="default_percentage"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_commission_rule_form" model="ir.ui.view">
+        <field name="name">mwanzo.commission.rule.form</field>
+        <field name="model">mwanzo.commission.rule</field>
+        <field name="arch" type="xml">
+            <form string="Commission Rule">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="product_category_id"/>
+                        </group>
+                        <group>
+                            <field name="default_percentage"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_commission_rule_search" model="ir.ui.view">
+        <field name="name">mwanzo.commission.rule.search</field>
+        <field name="model">mwanzo.commission.rule</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="product_category_id"/>
+                <filter string="Active" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactive" name="inactive" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_commission_rule" model="ir.actions.act_window">
+        <field name="name">Commission Rules</field>
+        <field name="res_model">mwanzo.commission.rule</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_mwanzo_commission_rule_search"/>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_commission_rule"
+        name="Commission Rates"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_config_market"
+        action="bp_mwanzo_marketplace.action_mwanzo_commission_rule"
+        sequence="30"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <!-- Vendor Licenses -->
+    <record id="view_mwanzo_vendor_license_kanban" model="ir.ui.view">
+        <field name="name">mwanzo.vendor.license.kanban</field>
+        <field name="model">mwanzo.vendor.license</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="stage_id" class="o_kanban_small_column" quick_create="false">
+                <field name="stage_id"/>
+                <field name="vendor_id"/>
+                <field name="license_number"/>
+                <field name="license_type"/>
+                <field name="license_fee"/>
+                <field name="currency_id"/>
+                <field name="state"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="theme_ids"/>
+                <field name="is_expiring_soon"/>
+                <field name="days_to_expire"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click oe_kanban_card d-flex flex-column p-2">
+                            <!-- Header: Vendor Name & License Number -->
+                            <div class="o_kanban_card_header mb-2">
+                                <div class="o_kanban_card_header_title">
+                                    <div class="h5 mb-0 text-primary fw-bold">
+                                        <field name="vendor_id"/>
+                                    </div>
+                                    <div class="small text-muted mt-1" t-if="record.license_number.raw_value">
+                                        <i class="fa fa-hashtag me-1" title="License Number"/> <field name="license_number"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Body: Details with Icons -->
+                            <div class="o_kanban_card_content flex-grow-1">
+                                <div class="row g-0 mb-1 align-items-center">
+                                    <div class="col-6 text-truncate">
+                                        <i class="fa fa-tag me-2 text-muted" title="Type"/>
+                                        <field name="license_type"/>
+                                    </div>
+                                    <div class="col-6 text-end fw-bold">
+                                        <field name="license_fee" widget="monetary"/>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center mb-2 text-muted small">
+                                    <i class="fa fa-calendar me-2" title="Duration"/>
+                                    <span>
+                                        <field name="date_start"/> 
+                                        <i class="fa fa-long-arrow-right mx-1" title="to"/> 
+                                        <field name="date_end"/>
+                                    </span>
+                                </div>
+                                <div class="mt-2" t-if="record.theme_ids.raw_value">
+                                    <field name="theme_ids" widget="many2many_tags"/>
+                                </div>
+                                <div class="mt-2" t-if="record.is_expiring_soon.raw_value">
+                                    <span class="badge text-bg-warning">
+                                        Expiring in <field name="days_to_expire"/> days
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_vendor_license_tree" model="ir.ui.view">
+        <field name="name">mwanzo.vendor.license.tree</field>
+        <field name="model">mwanzo.vendor.license</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="vendor_id"/>
+                <field name="theme_ids" widget="many2many_tags"/>
+                <field name="space_ids" widget="many2many_tags"/>
+                <field name="license_type"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="license_fee"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_vendor_license_form" model="ir.ui.view">
+        <field name="name">mwanzo.vendor.license.form</field>
+        <field name="model">mwanzo.vendor.license</field>
+        <field name="arch" type="xml">
+            <form string="Vendor License">
+                <header>
+                    <button
+                        name="action_set_active"
+                        type="object"
+                        string="Activate"
+                        class="btn-primary"
+                        invisible="state == 'active'"
+                    />
+                    <button
+                        name="action_set_expired"
+                        type="object"
+                        string="Expire"
+                        class="btn-secondary"
+                        invisible="state != 'active'"
+                    />
+                    <button
+                        name="action_set_cancelled"
+                        type="object"
+                        string="Cancel"
+                        class="btn-secondary"
+                        invisible="state not in ['draft', 'active']"
+                    />
+                    <button
+                        name="action_reset_to_draft"
+                        type="object"
+                        string="Reset to Draft"
+                        class="btn-secondary"
+                        invisible="state == 'draft'"
+                    />
+                    <button
+                        name="action_create_license_invoice"
+                        type="object"
+                        string="Create Invoice"
+                        class="btn-primary"
+                        invisible="invoice_id != False and billing_method == 'one_time'"
+                    />
+                    <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="draft,active,expired,cancelled"
+                    />
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_invoices" type="object" class="oe_stat_button" icon="fa-pencil-square-o" invisible="not invoice_ids">
+                            <field name="amount_invoiced" widget="statinfo" string="Invoiced"/>
+                        </button>
+                        <button name="action_view_stock_intakes" type="object" class="oe_stat_button" icon="fa-cubes">
+                            <field name="stock_intake_count" widget="statinfo" string="Stock Intakes"/>
+                        </button>
+                        <button name="action_view_vendor_statements" type="object" class="oe_stat_button" icon="fa-list-alt">
+                            <field name="vendor_statement_count" widget="statinfo" string="Statements"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <label for="license_number" class="oe_edit_only"/>
+                        <h1>
+                            <field name="license_number" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Vendor Details">
+                            <field name="vendor_id" readonly="state != 'draft'"/>
+                            <field name="is_medium_large" readonly="state != 'draft'"/>
+                            <field name="company_id" invisible="1"/>
+                        </group>
+                        <group string="License Configuration">
+                            <field name="license_type" readonly="state != 'draft'"/>
+                            <field name="theme_ids" widget="many2many_tags" readonly="state != 'draft'"/>
+                            <field name="space_ids" widget="many2many_tags" readonly="state != 'draft'"/>
+                            <field name="signed_contract" readonly="state != 'draft'"/>
+                            <field name="stage_id" options="{'no_create': True}" invisible="1"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Validity Period">
+                            <field name="date_start" readonly="state != 'draft'"/>
+                            <field name="date_end" readonly="state != 'draft'"/>
+                        </group>
+                        <group string="Financials">
+                            <field name="license_fee" widget="monetary" options="{'currency_field': 'currency_id'}" readonly="state != 'draft'"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="billing_method" readonly="state != 'draft'"/>
+                            <field name="recurring_amount" widget="monetary" options="{'currency_field': 'currency_id'}" invisible="billing_method != 'monthly'" required="billing_method == 'monthly'" readonly="state != 'draft'"/>
+                            <field name="next_invoice_date" invisible="billing_method != 'monthly'" readonly="state != 'draft'"/>
+                            <field name="invoice_id" invisible="1"/>
+                            <field name="invoice_ids" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Notes">
+                            <field name="notes" placeholder="Add any internal notes here..." readonly="state != 'draft'"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_vendor_license_search" model="ir.ui.view">
+        <field name="name">mwanzo.vendor.license.search</field>
+        <field name="model">mwanzo.vendor.license</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="vendor_id"/>
+                <field name="theme_ids"/>
+                <field name="license_type"/>
+                <field name="state"/>
+                <filter string="Active" name="state_active" domain="[('state', '=', 'active')]"/>
+                <filter string="Draft" name="state_draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Expired" name="state_expired" domain="[('state', '=', 'expired')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_vendor_license" model="ir.actions.act_window">
+        <field name="name">Vendor Licenses</field>
+        <field name="res_model">mwanzo.vendor.license</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="search_view_id" ref="view_mwanzo_vendor_license_search"/>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_vendor_license"
+        name="Vendor Licenses"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_operations"
+        action="bp_mwanzo_marketplace.action_mwanzo_vendor_license"
+        sequence="10"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <!-- License Stages -->
+    <record id="view_mwanzo_license_stage_tree" model="ir.ui.view">
+        <field name="name">mwanzo.license.stage.tree</field>
+        <field name="model">mwanzo.license.stage</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="target_state"/>
+                <field name="fold"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_license_stage_form" model="ir.ui.view">
+        <field name="name">mwanzo.license.stage.form</field>
+        <field name="model">mwanzo.license.stage</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="sequence"/>
+                        </group>
+                        <group>
+                            <field name="target_state"/>
+                            <field name="fold"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_license_stage" model="ir.actions.act_window">
+        <field name="name">Vendor License Stages</field>
+        <field name="res_model">mwanzo.license.stage</field>
+        <field name="view_mode">tree,form</field>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_license_stage"
+        name="Vendor License Stages"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_config_stages"
+        action="action_mwanzo_license_stage"
+        sequence="40"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+
+    <!-- Product form extension -->
+    <record id="product_template_form_view_mwanzo" model="ir.ui.view">
+        <field name="name">product.template.form.mwanzo</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Mwanzo" name="mwanzo">
+                    <group>
+                        <group>
+                            <field name="mwanzo_vendor_id"/>
+                            <field name="mwanzo_commission_rule_id"/>
+                        </group>
+                        <group>
+                            <field name="mwanzo_item_code" readonly="1"/>
+                            <field name="mwanzo_min_qty"/>
+                            <field name="mwanzo_replenish_qty"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

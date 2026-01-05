@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="seq_mwanzo_item_code" model="ir.sequence">
+        <field name="name">Mwanzo Item Code</field>
+        <field name="code">mwanzo.item.code</field>
+        <field name="prefix">MWZ-</field>
+        <field name="padding">5</field>
+        <field name="number_increment">1</field>
+    </record>
+
+    <record id="seq_mwanzo_stock_intake_session" model="ir.sequence">
+        <field name="name">Mwanzo Stock Intake Session</field>
+        <field name="code">mwanzo.stock.intake.session</field>
+        <field name="prefix">INTAKE-</field>
+        <field name="padding">5</field>
+        <field name="number_increment">1</field>
+        <field name="implementation">no_gap</field>
+    </record>
+
+    <record id="seq_mwanzo_vendor_statement" model="ir.sequence">
+        <field name="name">Mwanzo Vendor Statement</field>
+        <field name="code">mwanzo.vendor.statement</field>
+        <field name="prefix">STAT/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="number_increment">1</field>
+        <field name="implementation">no_gap</field>
+    </record>
+
+    <record id="seq_mwanzo_vendor_license" model="ir.sequence">
+        <field name="name">Mwanzo Vendor License</field>
+        <field name="code">mwanzo.vendor.license</field>
+        <field name="prefix">LIC/%(year)s/</field>
+        <field name="padding">5</field>
+        <field name="number_increment">1</field>
+        <field name="implementation">no_gap</field>
+    </record>
+</odoo>

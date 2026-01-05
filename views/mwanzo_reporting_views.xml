@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_mwanzo_sales_by_theme_report_tree" model="ir.ui.view">
+        <field name="name">mwanzo.sales.by.theme.report.tree</field>
+        <field name="model">mwanzo.sales.by.theme.report</field>
+        <field name="arch" type="xml">
+            <tree string="Sales by Theme">
+                <field name="theme_id"/>
+                <field name="vendor_id"/>
+                <field name="total_sales"/>
+                <field name="total_commission"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_sales_by_theme_report_search" model="ir.ui.view">
+        <field name="name">mwanzo.sales.by.theme.report.search</field>
+        <field name="model">mwanzo.sales.by.theme.report</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="theme_id"/>
+                <field name="vendor_id"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_sales_by_theme_report_pivot" model="ir.ui.view">
+        <field name="name">mwanzo.sales.by.theme.report.pivot</field>
+        <field name="model">mwanzo.sales.by.theme.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Sales by Theme Analysis" sample="1">
+                <field name="theme_id" type="row"/>
+                <field name="vendor_id" type="row"/>
+                <field name="total_sales" type="measure"/>
+                <field name="total_commission" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_mwanzo_sales_by_theme_report_graph" model="ir.ui.view">
+        <field name="name">mwanzo.sales.by.theme.report.graph</field>
+        <field name="model">mwanzo.sales.by.theme.report</field>
+        <field name="arch" type="xml">
+            <graph string="Sales by Theme Analysis" sample="1">
+                <field name="theme_id"/>
+                <field name="total_sales" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_mwanzo_sales_by_theme_report" model="ir.actions.act_window">
+        <field name="name">Sales by Theme</field>
+        <field name="res_model">mwanzo.sales.by.theme.report</field>
+        <field name="view_mode">pivot,graph,tree</field>
+        <field name="search_view_id" ref="view_mwanzo_sales_by_theme_report_search"/>
+        <field name="groups_id" eval="[(4, ref('bp_mwanzo_marketplace.group_mwanzo_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_mwanzo_sales_by_theme_report"
+        name="Sales by Theme"
+        parent="bp_mwanzo_marketplace.menu_mwanzo_marketplace_reporting"
+        action="bp_mwanzo_marketplace.action_mwanzo_sales_by_theme_report"
+        sequence="10"
+        groups="bp_mwanzo_marketplace.group_mwanzo_manager"
+    />
+</odoo>

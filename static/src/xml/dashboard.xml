@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="bp_mwanzo_marketplace.MarketHubDashboard" owl="1">
+        <div class="o_mwanzo_dashboard" style="width:100%; height:100%; overflow:hidden;">
+            <iframe t-att-src="'/market_hub/dashboard'" style="width:100%; height:100%; border:none;"/>
+        </div>
+    </t>
+</templates>
