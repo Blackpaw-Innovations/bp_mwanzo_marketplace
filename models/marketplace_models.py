@@ -718,3 +718,43 @@ class MwanzoCommissionRule(models.Model):
         help="Commission percentage e.g. 30 for 30%",
     )
     active = fields.Boolean(default=True)
+
+    @api.model
+    def _parse_percentage_from_name(self, name):
+        if not name:
+            return False
+        try:
+            return float(str(name).strip())
+        except (TypeError, ValueError):
+            return False
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("default_percentage") in (False, None, "") and vals.get("name"):
+                percentage = self._parse_percentage_from_name(vals["name"])
+                if percentage is not False:
+                    vals["default_percentage"] = percentage
+
+            if not vals.get("name") and vals.get("default_percentage") not in (False, None, ""):
+                percentage = vals["default_percentage"]
+                vals["name"] = str(int(percentage)) if float(percentage).is_integer() else str(percentage)
+
+            vals.setdefault("active", True)
+        return super().create(vals_list)
+
+    @api.model
+    def name_create(self, name):
+        existing = self.search([("name", "=", name)], limit=1)
+        if existing:
+            return existing.name_get()[0]
+
+        percentage = self._parse_percentage_from_name(name)
+        vals = {
+            "name": name,
+            "active": True,
+        }
+        if percentage is not False:
+            vals["default_percentage"] = percentage
+        record = self.create([vals])[0]
+        return record.name_get()[0]

@@ -8,6 +8,7 @@
     "category": "Sales/POS",
     "depends": [
         "base",
+        "barcodes",
         "contacts",
         "stock",
         "point_of_sale",
@@ -25,6 +26,7 @@
         "data/mwanzo_stock_intake_email_template.xml",
         "views/bp_mwanzo_menus.xml",
         "views/mwanzo_market_views.xml",
+        "views/mwanzo_inventory_scan_views.xml",
         "views/mwanzo_stock_intake_views.xml",
         "views/pos_views.xml",
         "views/mwanzo_vendor_settlement_views.xml",
@@ -34,6 +36,7 @@
         "views/mwanzo_staff_commission_views.xml",
         "views/res_config_settings_views.xml",
         "data/mwanzo_license_cron.xml",
+        "data/mwanzo_product_barcode_cron.xml",
         "data/mwanzo_stock_intake_cron.xml",
         "data/mwanzo_license_data.xml",
         "data/mwanzo_stock_intake_data.xml",
@@ -41,8 +44,12 @@
     ],
     "assets": {
         "web.assets_backend": [
+            "bp_mwanzo_marketplace/static/src/scss/account_report_fullpage.scss",
+            "bp_mwanzo_marketplace/static/src/js/barcode_scan_hook.js",
+            "bp_mwanzo_marketplace/static/src/js/inventory_list_scan.js",
             "bp_mwanzo_marketplace/static/src/js/dashboard.js",
             "bp_mwanzo_marketplace/static/src/xml/dashboard.xml",
+            "bp_mwanzo_marketplace/static/src/xml/inventory_list_scan.xml",
         ],
     },
     "installable": True,

@@ -7,3 +7,4 @@ from . import report_sales_by_theme
 from . import staff_commission
 from . import res_company
 from . import res_config_settings
+from . import mwanzo_inventory_scan
