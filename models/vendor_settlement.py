@@ -1,3 +1,7 @@
+import base64
+import csv
+import io
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 
@@ -300,6 +304,65 @@ class MwanzoVendorStatement(models.Model):
             statement._update_stage_from_state()
         return True
 
+    def action_export_csv(self):
+        self.ensure_one()
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(
+            [
+                "Statement",
+                "Vendor",
+                "Date From",
+                "Date To",
+                "POS Order Line",
+                "Product",
+                "Theme",
+                "Quantity",
+                "Quantity Remaining",
+                "VAT Rate",
+                "VAT Amount",
+                "Sale Amount",
+                "Commission Percentage",
+                "Commission Amount",
+                "Net Amount",
+            ]
+        )
+        for line in self.line_ids:
+            writer.writerow(
+                [
+                    self.name or "",
+                    self.vendor_id.display_name or "",
+                    self.date_from or "",
+                    self.date_to or "",
+                    line.pos_order_line_id.display_name or "",
+                    line.product_id.display_name or "",
+                    line.theme_id.display_name or "",
+                    line.quantity or 0.0,
+                    line.quantity_remaining or 0.0,
+                    line.vat_rate or 0.0,
+                    line.vat_amount or 0.0,
+                    line.sale_amount or 0.0,
+                    line.commission_percentage or 0.0,
+                    line.commission_amount or 0.0,
+                    line.net_amount or 0.0,
+                ]
+            )
+        attachment = self.env["ir.attachment"].create(
+            {
+                "name": f"{self.name or 'vendor-statement'}.csv",
+                "type": "binary",
+                "datas": base64.b64encode(buffer.getvalue().encode("utf-8")),
+                "mimetype": "text/csv",
+                "res_model": self._name,
+                "res_id": self.id,
+            }
+        )
+        return {
+            "type": "ir.actions.act_url",
+            "url": f"/web/content/{attachment.id}?download=true",
+            "target": "self",
+        }
+
 
 class MwanzoVendorStatementLine(models.Model):
     _name = "mwanzo.vendor.statement.line"
@@ -324,6 +387,10 @@ class MwanzoVendorStatementLine(models.Model):
         readonly=True,
     )
     commission_percentage = fields.Float()
+    quantity = fields.Float(string="Quantity", related="pos_order_line_id.qty", store=True, readonly=True)
+    quantity_remaining = fields.Float(string="Quantity Remaining", compute="_compute_quantity_remaining", readonly=True)
+    vat_rate = fields.Float(string="VAT Rate", compute="_compute_vat_rate", store=True, readonly=True)
+    vat_amount = fields.Monetary(string="VAT Amount", compute="_compute_vat_amount", store=True, readonly=True)
     sale_amount = fields.Monetary()
     commission_amount = fields.Monetary()
     net_amount = fields.Monetary()
@@ -333,6 +400,25 @@ class MwanzoVendorStatementLine(models.Model):
         store=True,
         readonly=True,
     )
+
+    @api.depends("product_id")
+    def _compute_quantity_remaining(self):
+        for line in self:
+            line.quantity_remaining = line.product_id.qty_available or 0.0
+
+    @api.depends("pos_order_line_id.price_subtotal", "pos_order_line_id.price_subtotal_incl")
+    def _compute_vat_amount(self):
+        for line in self:
+            line.vat_amount = (line.pos_order_line_id.price_subtotal_incl or 0.0) - (
+                line.pos_order_line_id.price_subtotal or 0.0
+            )
+
+    @api.depends("pos_order_line_id.price_subtotal", "pos_order_line_id.price_subtotal_incl")
+    def _compute_vat_rate(self):
+        for line in self:
+            subtotal = line.pos_order_line_id.price_subtotal or 0.0
+            tax_amount = (line.pos_order_line_id.price_subtotal_incl or 0.0) - subtotal
+            line.vat_rate = (tax_amount / subtotal * 100.0) if subtotal else 0.0
 
 
 class MwanzoVendorSettlementWizard(models.TransientModel):

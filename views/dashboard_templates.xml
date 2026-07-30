@@ -32,7 +32,7 @@
             </t>
             
             <div class="bg-gray-50 text-gray-800 min-h-screen font-sans">
-                <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 xl:pr-80">
+                <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <!-- Context Header -->
                     <section class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-8 shadow-sm">
                         <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
@@ -125,6 +125,54 @@
                                 </span>
                             </div>
                             <p class="text-sm text-green-500 mt-2">Validation required</p>
+                        </div>
+                    </section>
+
+                    <!-- Risk & Exceptions -->
+                    <section class="bg-white rounded-xl p-6 shadow-sm mb-8 border border-gray-100">
+                        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-6">
+                            <h3 class="text-lg font-semibold flex items-center gap-3 text-gray-900">
+                                <i data-feather="alert-circle" class="w-5 h-5 text-red-500"></i>
+                                Risk &amp; Exceptions
+                            </h3>
+                            <div class="text-sm text-gray-500">
+                                Active items require attention before they block operations.
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <t t-if="intake_pending > 0">
+                                <div class="flex items-start p-4 bg-red-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_stock_intake_session')">
+                                    <i data-feather="alert-triangle" class="w-5 h-5 mr-3 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                    <div>
+                                        <div class="font-medium text-red-800">Stock intake stalled</div>
+                                        <div class="text-sm text-red-600"><t t-esc="intake_pending"/> sessions pending</div>
+                                    </div>
+                                </div>
+                            </t>
+                            <t t-if="expiring_count > 0">
+                                <div class="flex items-start p-4 bg-orange-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_license')">
+                                    <i data-feather="clock" class="w-5 h-5 mr-3 text-orange-500 flex-shrink-0 mt-0.5"></i>
+                                    <div>
+                                        <div class="font-medium text-orange-800">Licenses expiring</div>
+                                        <div class="text-sm text-orange-600"><t t-esc="expiring_count"/> licenses within 30 days</div>
+                                    </div>
+                                </div>
+                            </t>
+                            <t t-if="settlement_counts['draft'] > 0">
+                                <div class="flex items-start p-4 bg-yellow-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_statement')">
+                                    <i data-feather="dollar-sign" class="w-5 h-5 mr-3 text-yellow-500 flex-shrink-0 mt-0.5"></i>
+                                    <div>
+                                        <div class="font-medium text-yellow-800">Settlements draft</div>
+                                        <div class="text-sm text-yellow-600"><t t-esc="settlement_counts['draft']"/> statements pending</div>
+                                    </div>
+                                </div>
+                            </t>
+                            <t t-if="not intake_pending and not expiring_count and not settlement_counts['draft']">
+                                <div class="md:col-span-3 text-sm text-gray-500 bg-gray-50 rounded-lg p-4">
+                                    No active risks or exceptions.
+                                </div>
+                            </t>
                         </div>
                     </section>
 
@@ -362,45 +410,6 @@
                     </section>
                 </main>
 
-                <!-- Risk & Exceptions Rail (Sidebar) -->
-                <aside class="fixed right-0 top-0 h-full w-72 bg-white shadow-2xl hidden xl:block p-6 overflow-y-auto border-l border-gray-100 z-50">
-                    <h3 class="text-lg font-semibold mb-6 flex items-center gap-3 text-gray-900">
-                        <i data-feather="alert-circle" class="w-5 h-5 text-red-500"></i>
-                        Risk &amp; Exceptions
-                    </h3>
-                    
-                    <div class="space-y-4">
-                        <t t-if="intake_pending > 0">
-                            <div class="flex items-start p-4 bg-red-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_stock_intake_session')">
-                                <i data-feather="alert-triangle" class="w-5 h-5 mr-3 text-red-500 flex-shrink-0 mt-0.5"></i>
-                                <div>
-                                    <div class="font-medium text-red-800">Stock intake stalled</div>
-                                    <div class="text-sm text-red-600"><t t-esc="intake_pending"/> sessions pending</div>
-                                </div>
-                            </div>
-                        </t>
-                        
-                        <t t-if="expiring_count > 0">
-                            <div class="flex items-start p-4 bg-orange-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_license')">
-                                <i data-feather="clock" class="w-5 h-5 mr-3 text-orange-500 flex-shrink-0 mt-0.5"></i>
-                                <div>
-                                    <div class="font-medium text-orange-800">Licenses expiring</div>
-                                    <div class="text-sm text-orange-600"><t t-esc="expiring_count"/> licenses within 30 days</div>
-                                </div>
-                            </div>
-                        </t>
-                        
-                        <t t-if="settlement_counts['draft'] > 0">
-                            <div class="flex items-start p-4 bg-yellow-50 rounded-lg hover:shadow-md transition-all cursor-pointer" onclick="openAction('bp_mwanzo_marketplace.action_mwanzo_vendor_statement')">
-                                <i data-feather="dollar-sign" class="w-5 h-5 mr-3 text-yellow-500 flex-shrink-0 mt-0.5"></i>
-                                <div>
-                                    <div class="font-medium text-yellow-800">Settlements draft</div>
-                                    <div class="text-sm text-yellow-600"><t t-esc="settlement_counts['draft']"/> statements pending</div>
-                                </div>
-                            </div>
-                        </t>
-                    </div>
-                </aside>
             </div>
 
             <script>
