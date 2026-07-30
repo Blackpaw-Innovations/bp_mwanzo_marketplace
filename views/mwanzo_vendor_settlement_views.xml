@@ -258,7 +258,7 @@
                             invisible="id"/>
                     <button name="action_confirm" type="object" string="Confirm" invisible="state != 'draft'" class="btn-primary"/>
                     <button name="action_create_vendor_bill" type="object" string="Create Vendor Bill" invisible="state != 'confirmed'" class="btn-secondary"/>
-                    <button name="action_export_csv" type="object" string="Export CSV" class="btn-secondary"/>
+                    <button name="%(bp_mwanzo_marketplace.action_report_mwanzo_vendor_statement)d" type="action" string="Print" class="btn-secondary"/>
                     <field name="stage_id" invisible="1"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,invoiced,paid"/>
                 </header>
@@ -341,6 +341,14 @@
         <field name="code">
             action = env.ref('bp_mwanzo_marketplace.action_mwanzo_vendor_settlement_wizard').read()[0]
         </field>
+    </record>
+
+    <record id="action_mwanzo_vendor_statement_export" model="ir.actions.client">
+        <field name="name">Export</field>
+        <field name="tag">bp_mwanzo_vendor_statement_export</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_mwanzo_vendor_statement"/>
+        <field name="binding_type">action</field>
     </record>
 
     <menuitem

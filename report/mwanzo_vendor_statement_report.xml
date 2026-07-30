@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_mwanzo_vendor_statement_a4" model="report.paperformat">
+        <field name="name">Vendor Statement A4</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">24</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">8</field>
+        <field name="margin_right">8</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">20</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_mwanzo_vendor_statement" model="ir.actions.report">
+        <field name="name">Vendor Statement</field>
+        <field name="model">mwanzo.vendor.statement</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">bp_mwanzo_marketplace.report_mwanzo_vendor_statement</field>
+        <field name="report_file">bp_mwanzo_marketplace.report_mwanzo_vendor_statement</field>
+        <field name="paperformat_id" ref="paperformat_mwanzo_vendor_statement_a4"/>
+        <field name="print_report_name">'Vendor Statement - %s' % (object.name or '').replace('/', '')</field>
+        <field name="binding_model_id" ref="model_mwanzo_vendor_statement"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_mwanzo_vendor_statement">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <t t-set="company" t-value="o.company_id or env.company"/>
+                    <div class="page vendor-statement-report" style="font-family: 'Roboto', sans-serif; color: #1f2937; font-size: 11px; line-height: 1.35; padding-top: 6px;">
+                        <style>
+                            .vendor-statement-report {
+                                padding-top: 12px;
+                            }
+                            .vendor-statement-band {
+                                border-top: 3px solid #7c7bad;
+                                border-bottom: 1px solid #d1d5db;
+                                padding: 10px 0 12px;
+                                margin-bottom: 14px;
+                            }
+                            .statement-title {
+                                font-size: 24px;
+                                font-weight: 700;
+                                line-height: 1.1;
+                                color: #111827;
+                                margin: 0;
+                            }
+                            .statement-number {
+                                color: #8b3e2f;
+                                font-size: 18px;
+                                font-weight: 700;
+                                margin-top: 2px;
+                            }
+                            .statement-meta {
+                                text-align: right;
+                                font-size: 11px;
+                                color: #374151;
+                            }
+                            .statement-meta .meta-label {
+                                font-weight: 700;
+                                color: #1f2937;
+                            }
+                            .statement-company {
+                                font-size: 12px;
+                                color: #111827;
+                                font-weight: 600;
+                            }
+                            .statement-subtle {
+                                color: #6b7280;
+                                font-size: 10px;
+                            }
+                            .rate-pair {
+                                font-size: 10px;
+                                line-height: 1.2;
+                            }
+                            .rate-pair .rate-label {
+                                display: block;
+                                color: #6b7280;
+                                text-transform: uppercase;
+                                letter-spacing: 0.03em;
+                                font-size: 9px;
+                                font-weight: 700;
+                            }
+                            .rate-pair .rate-value {
+                                display: block;
+                                color: #111827;
+                                font-weight: 600;
+                            }
+                            .vendor-statement-table {
+                                width: 100%;
+                                table-layout: fixed;
+                                border-collapse: collapse;
+                            }
+                            .vendor-statement-table th,
+                            .vendor-statement-table td {
+                                padding: 6px 4px;
+                                vertical-align: top;
+                                word-break: break-word;
+                            }
+                            .vendor-statement-table thead th {
+                                font-size: 10px;
+                                text-transform: uppercase;
+                                letter-spacing: 0.02em;
+                                color: #374151;
+                                border-bottom: 2px solid #111827;
+                                border-top: 1px solid #111827;
+                                background: #f8fafc;
+                            }
+                            .vendor-statement-table tbody td {
+                                border-bottom: 1px solid #e5e7eb;
+                            }
+                            .summary-card {
+                                border: 1px solid #e5e7eb;
+                                border-radius: 8px;
+                                padding: 10px 12px;
+                                background: #fafafa;
+                                height: 100%;
+                            }
+                            .summary-label {
+                                color: #6b7280;
+                                text-transform: uppercase;
+                                font-size: 9px;
+                                font-weight: 700;
+                                letter-spacing: 0.04em;
+                                margin-bottom: 2px;
+                            }
+                            .summary-value {
+                                font-size: 16px;
+                                font-weight: 700;
+                                color: #111827;
+                            }
+                        </style>
+
+                        <div class="vendor-statement-band">
+                            <div class="row align-items-start">
+                                <div class="col-7">
+                                    <div class="statement-subtle text-uppercase fw-bold">Vendor Statement</div>
+                                    <div class="statement-title"><t t-esc="o.name"/></div>
+                                    <div class="statement-company mt-2"><span t-field="o.vendor_id.display_name"/></div>
+                                    <div class="statement-subtle">
+                                        <span t-if="o.vendor_id.vat">VAT: <span t-field="o.vendor_id.vat"/></span>
+                                        <span t-if="o.vendor_id.email" class="ms-3">Email: <span t-field="o.vendor_id.email"/></span>
+                                        <span t-if="o.vendor_id.phone" class="ms-3">Phone: <span t-field="o.vendor_id.phone"/></span>
+                                    </div>
+                                </div>
+                                <div class="col-5">
+                                    <div class="statement-meta">
+                                        <div class="statement-company" t-field="company.name"/>
+                                        <div t-if="company.partner_id.country_id" t-field="company.partner_id.country_id.name"/>
+                                        <div class="mt-2">
+                                            <div><span class="meta-label">Date From:</span> <span t-field="o.date_from"/></div>
+                                            <div><span class="meta-label">Date To:</span> <span t-field="o.date_to"/></div>
+                                            <div><span class="meta-label">Status:</span> <span t-field="o.state"/></div>
+                                            <div t-if="o.vendor_bill_id"><span class="meta-label">Vendor Bill:</span> <span t-field="o.vendor_bill_id.name"/></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-4">
+                            <div class="col-4">
+                                <div class="summary-card">
+                                    <div class="summary-label">Total Sales</div>
+                                    <div class="summary-value"><span t-field="o.total_sales"/></div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="summary-card">
+                                    <div class="summary-label">Total Commission</div>
+                                    <div class="summary-value"><span t-field="o.total_commission"/></div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="summary-card">
+                                    <div class="summary-label">Total Net Payable</div>
+                                    <div class="summary-value"><span t-field="o.total_net_payable"/></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <table class="vendor-statement-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 12%;">POS Order Line</th>
+                                    <th style="width: 10%;">Product</th>
+                                    <th style="width: 12%;">Theme</th>
+                                    <th style="width: 7%;" class="text-end">Qty</th>
+                                    <th style="width: 8%;" class="text-end">Qty Remaining</th>
+                                    <th style="width: 10%;">Rates</th>
+                                    <th style="width: 11%;" class="text-end">Commission Amount</th>
+                                    <th style="width: 10%;" class="text-end">VAT Amount</th>
+                                    <th style="width: 10%;" class="text-end">Sale Amount</th>
+                                    <th style="width: 10%;" class="text-end">Net Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o.line_ids" t-as="line">
+                                    <td><span t-field="line.pos_order_line_id.display_name"/></td>
+                                    <td><span t-field="line.product_id.display_name"/></td>
+                                    <td><span t-field="line.theme_id.display_name"/></td>
+                                    <td class="text-end"><span t-field="line.quantity"/></td>
+                                    <td class="text-end"><span t-field="line.quantity_remaining"/></td>
+                                    <td>
+                                        <div class="rate-pair">
+                                            <span class="rate-label">Commission %</span>
+                                            <span class="rate-value"><span t-field="line.commission_percentage"/></span>
+                                            <span class="rate-label mt-1">VAT Rate</span>
+                                            <span class="rate-value"><span t-field="line.vat_rate"/></span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end"><span t-field="line.commission_amount"/></td>
+                                    <td class="text-end"><span t-field="line.vat_amount"/></td>
+                                    <td class="text-end"><span t-field="line.sale_amount"/></td>
+                                    <td class="text-end"><span t-field="line.net_amount"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
