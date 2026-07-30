@@ -22,6 +22,24 @@ class HrEmployee(models.Model):
     )
 
 
+class HrEmployeePublic(models.Model):
+    _inherit = "hr.employee.public"
+
+    mwanzo_daily_target_amount = fields.Monetary(
+        related="employee_id.mwanzo_daily_target_amount",
+        readonly=True,
+    )
+    mwanzo_commission_rate = fields.Float(
+        related="employee_id.mwanzo_commission_rate",
+        readonly=True,
+    )
+    currency_id = fields.Many2one(
+        "res.currency",
+        related="employee_id.currency_id",
+        readonly=True,
+    )
+
+
 class PosOrder(models.Model):
     _inherit = "pos.order"
 
