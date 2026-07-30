@@ -651,11 +651,9 @@ class MwanzoVendorLicense(models.Model):
             # Loop to catch up if multiple periods are due
             while license.next_invoice_date and license.next_invoice_date <= today and license.amount_invoiced < license.license_fee:
                 try:
-                    license.action_create_license_invoice()
-                    # Commit after each successful invoice to prevent one failure blocking others
-                    self.env.cr.commit()
+                    with self.env.cr.savepoint():
+                        license.action_create_license_invoice()
                 except Exception as e:
-                    self.env.cr.rollback()
                     _logger.error("Failed to generate recurring invoice for license %s: %s", license.name, str(e))
                     break
 
