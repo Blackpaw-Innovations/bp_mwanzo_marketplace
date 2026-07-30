@@ -322,7 +322,7 @@ class MwanzoVendorStatement(models.Model):
                 "VAT Rate",
                 "VAT Amount",
                 "Sale Amount",
-                "Commission Percentage",
+                "Commission %",
                 "Commission Amount",
                 "Net Amount",
             ]
@@ -386,14 +386,14 @@ class MwanzoVendorStatementLine(models.Model):
         store=True,
         readonly=True,
     )
-    commission_percentage = fields.Float()
+    commission_percentage = fields.Float(string="Commission %")
     quantity = fields.Float(string="Quantity", related="pos_order_line_id.qty", store=True, readonly=True)
     quantity_remaining = fields.Float(string="Quantity Remaining", compute="_compute_quantity_remaining", readonly=True)
-    vat_rate = fields.Float(string="VAT Rate", compute="_compute_vat_rate", store=True, readonly=True)
-    vat_amount = fields.Monetary(string="VAT Amount", compute="_compute_vat_amount", store=True, readonly=True)
+    vat_rate = fields.Float(string="VAT Rate", compute="_compute_vat_rate", inverse="_inverse_vat_rate", store=True)
+    vat_amount = fields.Monetary(string="VAT Amount", compute="_compute_pricing_amounts", store=True, readonly=True)
     sale_amount = fields.Monetary()
-    commission_amount = fields.Monetary()
-    net_amount = fields.Monetary()
+    commission_amount = fields.Monetary(string="Commission Amount", compute="_compute_pricing_amounts", store=True, readonly=True)
+    net_amount = fields.Monetary(compute="_compute_pricing_amounts", store=True, readonly=True)
     currency_id = fields.Many2one(
         "res.currency",
         related="statement_id.currency_id",
@@ -407,18 +407,29 @@ class MwanzoVendorStatementLine(models.Model):
             line.quantity_remaining = line.product_id.qty_available or 0.0
 
     @api.depends("pos_order_line_id.price_subtotal", "pos_order_line_id.price_subtotal_incl")
-    def _compute_vat_amount(self):
-        for line in self:
-            line.vat_amount = (line.pos_order_line_id.price_subtotal_incl or 0.0) - (
-                line.pos_order_line_id.price_subtotal or 0.0
-            )
-
-    @api.depends("pos_order_line_id.price_subtotal", "pos_order_line_id.price_subtotal_incl")
     def _compute_vat_rate(self):
         for line in self:
             subtotal = line.pos_order_line_id.price_subtotal or 0.0
             tax_amount = (line.pos_order_line_id.price_subtotal_incl or 0.0) - subtotal
             line.vat_rate = (tax_amount / subtotal * 100.0) if subtotal else 0.0
+
+    def _inverse_vat_rate(self):
+        # Keep the manually entered value; the amount fields react through onchange/compute.
+        return
+
+    @api.depends("sale_amount", "commission_percentage", "vat_rate")
+    def _compute_pricing_amounts(self):
+        for line in self:
+            sale_amount = line.sale_amount or 0.0
+            commission_percentage = line.commission_percentage or 0.0
+            vat_rate = line.vat_rate or 0.0
+            line.commission_amount = sale_amount * commission_percentage / 100.0
+            line.vat_amount = sale_amount * vat_rate / 100.0
+            line.net_amount = sale_amount - line.commission_amount
+
+    @api.onchange("sale_amount", "commission_percentage", "vat_rate")
+    def _onchange_pricing_amounts(self):
+        self._compute_pricing_amounts()
 
 
 class MwanzoVendorSettlementWizard(models.TransientModel):

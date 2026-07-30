@@ -287,11 +287,11 @@
                             <field name="theme_id"/>
                             <field name="quantity"/>
                             <field name="quantity_remaining"/>
+                            <field name="commission_percentage"/>
+                            <field name="commission_amount"/>
                             <field name="vat_rate"/>
                             <field name="vat_amount"/>
-                            <field name="commission_percentage"/>
                             <field name="sale_amount"/>
-                            <field name="commission_amount"/>
                             <field name="net_amount"/>
                         </tree>
                     </field>
