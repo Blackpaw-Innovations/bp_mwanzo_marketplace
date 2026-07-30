@@ -37,7 +37,7 @@
                                 </div>
                                 <div class="mt-2" t-if="record.picking_count.raw_value > 0">
                                     <span class="badge text-bg-success">
-                                        <i class="fa fa-truck me-1"/> <field name="picking_count"/> Delivery
+                                        <i class="fa fa-truck me-1" title="Delivery"/> <field name="picking_count"/> Delivery
                                     </span>
                                 </div>
                             </div>
