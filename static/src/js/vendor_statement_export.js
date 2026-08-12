@@ -10,23 +10,32 @@ class VendorStatementExportAction extends Component {
     setup() {
         this.actionService = useService("action");
         this.dialog = useService("dialog");
-        this.orm = useService("orm");
         this.rpc = useService("rpc");
         this.defaultExportList = [
-            { name: "name" },
+            { name: "statement_name" },
             { name: "vendor_id" },
             { name: "date_from" },
             { name: "date_to" },
-            { name: "total_sales" },
-            { name: "total_commission" },
-            { name: "total_net_payable" },
-            { name: "state" },
+            { name: "pos_order_line_id" },
+            { name: "product_id" },
+            { name: "theme_id" },
+            { name: "quantity" },
+            { name: "quantity_remaining" },
+            { name: "collected_amount" },
+            { name: "sale_amount" },
+            { name: "vat_rate" },
+            { name: "vat_amount" },
+            { name: "commission_percentage" },
+            { name: "commission_amount" },
+            { name: "discount_amount" },
+            { name: "net_amount" },
         ];
 
         onMounted(() => {
             const context = this.props.action?.context || {};
             const activeIds = context.active_ids || (context.active_id ? [context.active_id] : []);
-            const resModel = context.active_model || "mwanzo.vendor.statement";
+            const resModel = "mwanzo.vendor.statement.line";
+            const domain = [["statement_id", "in", activeIds]];
 
             this.dialog.add(ExportDataDialog, {
                 context,
@@ -49,10 +58,10 @@ class VendorStatementExportAction extends Component {
                             data: JSON.stringify({
                                 import_compat: importCompat,
                                 context,
-                                domain: [["id", "in", activeIds]],
+                                domain,
                                 fields: exportedFields,
                                 groupby: [],
-                                ids: activeIds,
+                                ids: false,
                                 model: resModel,
                             }),
                         },
@@ -68,10 +77,10 @@ class VendorStatementExportAction extends Component {
                 },
                 root: {
                     resModel,
-                    domain: [["id", "in", activeIds]],
+                    domain,
                     groupBy: [],
-                    selection: activeIds,
-                    isDomainSelected: false,
+                    selection: [],
+                    isDomainSelected: true,
                 },
             });
 

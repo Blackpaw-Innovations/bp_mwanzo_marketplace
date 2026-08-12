@@ -1,6 +1,7 @@
 import base64
 import csv
 import io
+import xlsxwriter
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -156,6 +157,10 @@ class MwanzoVendorStatement(models.Model):
         store=True,
         readonly=True,
     )
+    payout_notes = fields.Text(string="Payout Notes", tracking=True)
+    total_collected = fields.Monetary(compute="_compute_totals", store=True)
+    total_discount = fields.Monetary(compute="_compute_totals", store=True)
+    total_vat = fields.Monetary(compute="_compute_totals", store=True)
     total_sales = fields.Monetary(compute="_compute_totals", store=True)
     total_commission = fields.Monetary(compute="_compute_totals", store=True)
     total_net_payable = fields.Monetary(compute="_compute_totals", store=True)
@@ -209,13 +214,26 @@ class MwanzoVendorStatement(models.Model):
             if stage and stage != record.stage_id:
                 record.stage_id = stage
 
-    @api.depends("line_ids.sale_amount", "line_ids.commission_amount", "line_ids.net_amount")
+    @api.depends(
+        "line_ids.collected_amount",
+        "line_ids.discount_amount",
+        "line_ids.sale_amount",
+        "line_ids.vat_amount",
+        "line_ids.commission_amount",
+        "line_ids.net_amount",
+    )
     def _compute_totals(self):
         for statement in self:
+            total_collected = sum(statement.line_ids.mapped("collected_amount"))
+            total_discount = sum(statement.line_ids.mapped("discount_amount"))
             total_sales = sum(statement.line_ids.mapped("sale_amount"))
+            total_vat = sum(statement.line_ids.mapped("vat_amount"))
             total_commission = sum(statement.line_ids.mapped("commission_amount"))
             total_net = sum(statement.line_ids.mapped("net_amount"))
+            statement.total_collected = total_collected
+            statement.total_discount = total_discount
             statement.total_sales = total_sales
+            statement.total_vat = total_vat
             statement.total_commission = total_commission
             statement.total_net_payable = total_net
 
@@ -308,45 +326,8 @@ class MwanzoVendorStatement(models.Model):
         self.ensure_one()
         buffer = io.StringIO()
         writer = csv.writer(buffer)
-        writer.writerow(
-            [
-                "Statement",
-                "Vendor",
-                "Date From",
-                "Date To",
-                "POS Order Line",
-                "Product",
-                "Theme",
-                "Quantity",
-                "Quantity Remaining",
-                "VAT Rate",
-                "VAT Amount",
-                "Sale Amount",
-                "Commission %",
-                "Commission Amount",
-                "Net Amount",
-            ]
-        )
-        for line in self.line_ids:
-            writer.writerow(
-                [
-                    self.name or "",
-                    self.vendor_id.display_name or "",
-                    self.date_from or "",
-                    self.date_to or "",
-                    line.pos_order_line_id.display_name or "",
-                    line.product_id.display_name or "",
-                    line.theme_id.display_name or "",
-                    line.quantity or 0.0,
-                    line.quantity_remaining or 0.0,
-                    line.vat_rate or 0.0,
-                    line.vat_amount or 0.0,
-                    line.sale_amount or 0.0,
-                    line.commission_percentage or 0.0,
-                    line.commission_amount or 0.0,
-                    line.net_amount or 0.0,
-                ]
-            )
+        for row in self._get_template_export_rows():
+            writer.writerow(row)
         attachment = self.env["ir.attachment"].create(
             {
                 "name": f"{self.name or 'vendor-statement'}.csv",
@@ -363,6 +344,137 @@ class MwanzoVendorStatement(models.Model):
             "target": "self",
         }
 
+    def action_export_xlsx(self):
+        self.ensure_one()
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output, {"in_memory": True})
+        worksheet = workbook.add_worksheet("Statement")
+        title_format = workbook.add_format({"bold": True})
+        header_format = workbook.add_format({"bold": True, "border": 1})
+        text_format = workbook.add_format({})
+        number_format = workbook.add_format({"num_format": "#,##0.00"})
+        total_label_format = workbook.add_format({"bold": True, "top": 1})
+        total_number_format = workbook.add_format({"bold": True, "top": 1, "num_format": "#,##0.00"})
+        total_integer_format = workbook.add_format({"bold": True, "top": 1, "num_format": "#,##0"})
+
+        rows = self._get_template_export_rows()
+        for row_idx, row in enumerate(rows):
+            for col_idx, value in enumerate(row):
+                if row_idx == 7:
+                    worksheet.write(row_idx, col_idx, value, header_format)
+                elif row_idx == len(rows) - 1:
+                    if col_idx == 0:
+                        worksheet.write(row_idx, col_idx, value, total_label_format)
+                    elif isinstance(value, (int, float)):
+                        fmt = total_integer_format if col_idx == 1 else total_number_format
+                        worksheet.write_number(row_idx, col_idx, value, fmt)
+                    else:
+                        worksheet.write(row_idx, col_idx, value, total_label_format)
+                elif row_idx < 5:
+                    worksheet.write(row_idx, col_idx, value, title_format if col_idx == 0 else text_format)
+                else:
+                    if isinstance(value, (int, float)):
+                        worksheet.write_number(row_idx, col_idx, value, number_format)
+                    else:
+                        worksheet.write(row_idx, col_idx, value, text_format)
+
+        worksheet.set_column("A:A", 24)
+        worksheet.set_column("B:K", 14)
+        workbook.close()
+        output.seek(0)
+
+        attachment = self.env["ir.attachment"].create(
+            {
+                "name": f"{self.name or 'vendor-statement'}.xlsx",
+                "type": "binary",
+                "datas": base64.b64encode(output.read()),
+                "mimetype": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "res_model": self._name,
+                "res_id": self.id,
+            }
+        )
+        return {
+            "type": "ir.actions.act_url",
+            "url": f"/web/content/{attachment.id}?download=true",
+            "target": "self",
+        }
+
+    def action_open_export_wizard(self):
+        self.ensure_one()
+        return {
+            "name": _("Export Vendor Statement"),
+            "type": "ir.actions.act_window",
+            "res_model": "mwanzo.vendor.statement.export.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "default_statement_id": self.id,
+            },
+        }
+
+    def _get_template_export_rows(self):
+        self.ensure_one()
+        theme_names = sorted({line.theme_id.name for line in self.line_ids if line.theme_id.name})
+        rows = [
+            ["Vendor", self.vendor_id.display_name or ""],
+            ["Date From", fields.Date.to_string(self.date_from) if self.date_from else ""],
+            ["Date To", fields.Date.to_string(self.date_to) if self.date_to else ""],
+            ["Theme", ", ".join(theme_names)],
+            ["Statement No", self.name or ""],
+            [],
+            [],
+            ["Product", "Quantity", "Qty Left", "Collected", "Commission %", "Commission", "VAT %", "VAT", "Sales Excl.", "Discount", "Payable"],
+        ]
+        total_quantity = 0.0
+        total_qty_left = 0.0
+        total_collected = 0.0
+        total_commission_pct = 0.0
+        total_commission = 0.0
+        total_vat_pct = 0.0
+        total_vat = 0.0
+        total_sales = 0.0
+        total_discount = 0.0
+        total_payable = 0.0
+        for line in self.line_ids:
+            rows.append([
+                line.product_id.display_name or "",
+                line.quantity or 0.0,
+                line.quantity_remaining or 0.0,
+                line.collected_amount or 0.0,
+                line.commission_percentage or 0.0,
+                line.commission_amount or 0.0,
+                line.vat_rate or 0.0,
+                line.vat_amount or 0.0,
+                line.sale_amount or 0.0,
+                line.discount_amount or 0.0,
+                line.net_amount or 0.0,
+            ])
+            total_quantity += line.quantity or 0.0
+            total_qty_left += line.quantity_remaining or 0.0
+            total_collected += line.collected_amount or 0.0
+            total_commission_pct += line.commission_percentage or 0.0
+            total_commission += line.commission_amount or 0.0
+            total_vat_pct += line.vat_rate or 0.0
+            total_vat += line.vat_amount or 0.0
+            total_sales += line.sale_amount or 0.0
+            total_discount += line.discount_amount or 0.0
+            total_payable += line.net_amount or 0.0
+        rows.append([])
+        rows.append([
+            "Total",
+            total_quantity,
+            total_qty_left,
+            total_collected,
+            total_commission_pct,
+            total_commission,
+            total_vat_pct,
+            total_vat,
+            total_sales,
+            total_discount,
+            total_payable,
+        ])
+        return rows
+
 
 class MwanzoVendorStatementLine(models.Model):
     _name = "mwanzo.vendor.statement.line"
@@ -373,6 +485,10 @@ class MwanzoVendorStatementLine(models.Model):
         required=True,
         ondelete="cascade",
     )
+    statement_name = fields.Char(related="statement_id.name", store=True, readonly=True)
+    vendor_id = fields.Many2one("res.partner", related="statement_id.vendor_id", store=True, readonly=True)
+    date_from = fields.Date(related="statement_id.date_from", store=True, readonly=True)
+    date_to = fields.Date(related="statement_id.date_to", store=True, readonly=True)
     pos_order_line_id = fields.Many2one("pos.order.line", required=True)
     product_id = fields.Many2one(
         "product.product",
@@ -388,12 +504,24 @@ class MwanzoVendorStatementLine(models.Model):
     )
     commission_percentage = fields.Float(string="Commission %")
     quantity = fields.Float(string="Quantity", related="pos_order_line_id.qty", store=True, readonly=True)
-    quantity_remaining = fields.Float(string="Quantity Remaining", compute="_compute_quantity_remaining", readonly=True)
-    vat_rate = fields.Float(string="VAT Rate", compute="_compute_vat_rate", inverse="_inverse_vat_rate", store=True)
-    vat_amount = fields.Monetary(string="VAT Amount", compute="_compute_pricing_amounts", store=True, readonly=True)
-    sale_amount = fields.Monetary()
-    commission_amount = fields.Monetary(string="Commission Amount", compute="_compute_pricing_amounts", store=True, readonly=True)
-    net_amount = fields.Monetary(compute="_compute_pricing_amounts", store=True, readonly=True)
+    quantity_remaining = fields.Float(string="Qty Left", compute="_compute_quantity_remaining", readonly=True)
+    collected_amount = fields.Monetary(
+        string="Collected",
+        compute="_compute_pricing_amounts",
+        store=True,
+        readonly=True,
+    )
+    discount_amount = fields.Monetary(
+        string="Discount",
+        compute="_compute_pricing_amounts",
+        store=True,
+        readonly=True,
+    )
+    vat_rate = fields.Float(string="VAT %", compute="_compute_vat_rate", inverse="_inverse_vat_rate", store=True)
+    vat_amount = fields.Monetary(string="VAT", compute="_compute_pricing_amounts", store=True, readonly=True)
+    sale_amount = fields.Monetary(string="Sales Excl.")
+    commission_amount = fields.Monetary(string="Commission", compute="_compute_pricing_amounts", store=True, readonly=True)
+    net_amount = fields.Monetary(string="Payable", compute="_compute_pricing_amounts", store=True, readonly=True)
     currency_id = fields.Many2one(
         "res.currency",
         related="statement_id.currency_id",
@@ -417,19 +545,48 @@ class MwanzoVendorStatementLine(models.Model):
         # Keep the manually entered value; the amount fields react through onchange/compute.
         return
 
-    @api.depends("sale_amount", "commission_percentage", "vat_rate")
+    @api.depends(
+        "sale_amount",
+        "commission_percentage",
+        "vat_rate",
+        "pos_order_line_id.price_subtotal_incl",
+        "pos_order_line_id.price_unit",
+        "pos_order_line_id.qty",
+    )
     def _compute_pricing_amounts(self):
         for line in self:
             sale_amount = line.sale_amount or 0.0
             commission_percentage = line.commission_percentage or 0.0
             vat_rate = line.vat_rate or 0.0
-            line.commission_amount = sale_amount * commission_percentage / 100.0
+            list_amount = (line.pos_order_line_id.price_unit or 0.0) * (line.pos_order_line_id.qty or 0.0)
+            line.collected_amount = line.pos_order_line_id.price_subtotal_incl or 0.0
+            line.discount_amount = max(list_amount - sale_amount, 0.0)
             line.vat_amount = sale_amount * vat_rate / 100.0
-            line.net_amount = sale_amount - line.commission_amount
+            gross_amount = sale_amount + line.vat_amount
+            line.commission_amount = gross_amount * commission_percentage / 100.0
+            line.net_amount = gross_amount - line.commission_amount
 
     @api.onchange("sale_amount", "commission_percentage", "vat_rate")
     def _onchange_pricing_amounts(self):
         self._compute_pricing_amounts()
+
+
+class MwanzoVendorStatementExportWizard(models.TransientModel):
+    _name = "mwanzo.vendor.statement.export.wizard"
+    _description = "Vendor Statement Export Wizard"
+
+    statement_id = fields.Many2one("mwanzo.vendor.statement", required=True, readonly=True)
+    export_format = fields.Selection(
+        [("csv", "CSV"), ("xlsx", "XLSX")],
+        required=True,
+        default="xlsx",
+    )
+
+    def action_export(self):
+        self.ensure_one()
+        if self.export_format == "csv":
+            return self.statement_id.action_export_csv()
+        return self.statement_id.action_export_xlsx()
 
 
 class MwanzoVendorSettlementWizard(models.TransientModel):
@@ -487,9 +644,11 @@ class MwanzoVendorSettlementWizard(models.TransientModel):
             line_vals = []
             for line in vendor_lines:
                 sale_amount = line.price_subtotal
+                vat_amount = (line.price_subtotal_incl or 0.0) - sale_amount
                 commission_percentage = line.mwanzo_commission_percentage or 0.0
-                commission_amount = sale_amount * commission_percentage / 100.0
-                net_amount = sale_amount - commission_amount
+                gross_amount = sale_amount + vat_amount
+                commission_amount = gross_amount * commission_percentage / 100.0
+                net_amount = gross_amount - commission_amount
                 line_vals.append(
                     (
                         0,
