@@ -185,6 +185,18 @@ class MwanzoVendorStatement(models.Model):
         default=lambda self: self._default_stage_id(),
     )
     vendor_bill_id = fields.Many2one("account.move", string="Vendor Bill")
+    commission_invoice_id = fields.Many2one(
+        "account.move",
+        string="Commission Invoice",
+        copy=False,
+        readonly=True,
+    )
+    commission_clearing_move_id = fields.Many2one(
+        "account.move",
+        string="Commission Clearing Entry",
+        copy=False,
+        readonly=True,
+    )
     settlement_run_id = fields.Many2one("mwanzo.settlement.run", string="Settlement Run", ondelete="cascade")
 
     _sql_constraints = [
@@ -244,83 +256,225 @@ class MwanzoVendorStatement(models.Model):
 
     def action_create_vendor_bill(self):
         for statement in self:
-            if statement.vendor_bill_id:
-                raise UserError(_("A bill already exists for this statement."))
             if statement.total_net_payable <= 0:
                 raise UserError(_("Total net payable is zero or negative; cannot create bill."))
 
-            journal = self.env["account.journal"].search(
-                [
-                    ("type", "=", "purchase"),
-                    ("company_id", "=", statement.company_id.id),
-                ],
-                limit=1,
-            )
-            if not journal:
-                raise UserError(_("Please configure a Purchase journal for the company."))
-            
-            # Account for Sales Value (Expense/COGS)
-            expense_account = statement.vendor_id.property_account_payable_id # Fallback
-            # Try to find a specific expense account if possible, or use a default
-            expense_account = self.env["account.account"].search(
-                [
-                    ("account_type", "=", "expense"),
-                    ("company_id", "=", statement.company_id.id),
-                    ("deprecated", "=", False),
-                ],
-                limit=1,
-            )
-            if not expense_account:
-                 raise UserError(_("Please configure an expense account for the company."))
+            if not statement.vendor_bill_id:
+                statement.vendor_bill_id = statement._create_vendor_payout_bill()
+            if statement.total_commission and not statement.commission_invoice_id:
+                statement.commission_invoice_id = statement._create_commission_invoice()
+            if statement.commission_invoice_id and not statement.commission_clearing_move_id:
+                statement.commission_clearing_move_id = statement._create_commission_clearing_entry()
 
-            # Account for Commission (Income)
-            income_account = self.env["account.account"].search(
-                [
-                    ("account_type", "=", "income"),
-                    ("company_id", "=", statement.company_id.id),
-                    ("deprecated", "=", False),
-                ],
-                limit=1,
-            )
-            if not income_account:
-                raise UserError(_("Please configure an income account for the company."))
-
-            move = self.env["account.move"].create(
-                {
-                    "move_type": "in_invoice",
-                    "partner_id": statement.vendor_id.id,
-                    "invoice_date": fields.Date.context_today(self),
-                    "journal_id": journal.id,
-                    "company_id": statement.company_id.id,
-                    "invoice_origin": statement.name,
-                    "invoice_line_ids": [
-                        (
-                            0,
-                            0,
-                            {
-                                "name": _("Sales Value for %s") % statement.name,
-                                "quantity": 1.0,
-                                "price_unit": statement.total_sales,
-                                "account_id": expense_account.id,
-                            },
-                        ),
-                        (
-                            0,
-                            0,
-                            {
-                                "name": _("Commission Retained for %s") % statement.name,
-                                "quantity": 1.0,
-                                "price_unit": -statement.total_commission,
-                                "account_id": income_account.id,
-                            },
-                        ),
-                    ],
-                }
-            )
-            statement.vendor_bill_id = move.id
             statement.state = "invoiced"
             statement._update_stage_from_state()
         return True
+
+    def _get_statement_purchase_journal(self):
+        self.ensure_one()
+        journal = self.company_id.mwanzo_vendor_bill_journal_id or self.env["account.journal"].search(
+            [("type", "=", "purchase"), ("company_id", "=", self.company_id.id)],
+            limit=1,
+        )
+        if not journal:
+            raise UserError(_("Please configure a purchase journal for vendor settlement bills."))
+        return journal
+
+    def _get_statement_sale_journal(self):
+        self.ensure_one()
+        journal = self.company_id.mwanzo_commission_invoice_journal_id or self.env["account.journal"].search(
+            [("type", "=", "sale"), ("company_id", "=", self.company_id.id)],
+            limit=1,
+        )
+        if not journal:
+            raise UserError(_("Please configure a sales journal for commission invoices."))
+        return journal
+
+    def _get_statement_clearing_journal(self):
+        self.ensure_one()
+        journal = self.company_id.mwanzo_commission_clearing_journal_id or self.env["account.journal"].search(
+            [("type", "=", "general"), ("company_id", "=", self.company_id.id)],
+            limit=1,
+        )
+        if not journal:
+            raise UserError(_("Please configure a general journal for commission clearing entries."))
+        return journal
+
+    def _get_vendor_payout_account(self):
+        self.ensure_one()
+        account = self.company_id.mwanzo_vendor_payout_account_id
+        if not account:
+            account = self.env["account.account"].search(
+                [
+                    ("code", "=", "511100"),
+                    ("account_type", "=", "expense"),
+                    ("company_id", "=", self.company_id.id),
+                    ("deprecated", "=", False),
+                ],
+                limit=1,
+            )
+        if not account:
+            account = self.env["account.account"].search(
+                [
+                    ("account_type", "=", "expense"),
+                    ("company_id", "=", self.company_id.id),
+                    ("deprecated", "=", False),
+                ],
+                limit=1,
+            )
+        if not account:
+            raise UserError(_("Please configure a vendor payout expense account."))
+        return account
+
+    def _get_commission_income_account(self):
+        self.ensure_one()
+        account = self.company_id.mwanzo_commission_income_account_id
+        if not account:
+            account = self.env["account.account"].search(
+                [
+                    ("code", "=", "0000"),
+                    ("account_type", "in", ("income", "income_other")),
+                    ("company_id", "=", self.company_id.id),
+                    ("deprecated", "=", False),
+                ],
+                limit=1,
+            )
+        if not account:
+            account = self.env["account.account"].search(
+                [
+                    ("account_type", "in", ("income", "income_other")),
+                    ("company_id", "=", self.company_id.id),
+                    ("deprecated", "=", False),
+                ],
+                order="code asc",
+                limit=1,
+            )
+        if not account:
+            raise UserError(_("Please configure a commission income account."))
+        return account
+
+    def _create_vendor_payout_bill(self):
+        self.ensure_one()
+        move = self.env["account.move"].create({
+            "move_type": "in_invoice",
+            "partner_id": self.vendor_id.id,
+            "invoice_date": fields.Date.context_today(self),
+            "journal_id": self._get_statement_purchase_journal().id,
+            "company_id": self.company_id.id,
+            "invoice_origin": self.name,
+            "ref": _("Vendor settlement %s") % self.name,
+            "invoice_line_ids": [
+                (
+                    0,
+                    0,
+                    {
+                        "name": _("Vendor gross sales collected for %s") % self.name,
+                        "quantity": 1.0,
+                        "price_unit": self.total_collected,
+                        "account_id": self._get_vendor_payout_account().id,
+                    },
+                ),
+            ],
+        })
+        move.action_post()
+        return move
+
+    def _create_commission_invoice(self):
+        self.ensure_one()
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": self.vendor_id.id,
+            "invoice_date": fields.Date.context_today(self),
+            "journal_id": self._get_statement_sale_journal().id,
+            "company_id": self.company_id.id,
+            "invoice_origin": self.name,
+            "ref": _("Commission retained %s") % self.name,
+            "invoice_line_ids": [
+                (
+                    0,
+                    0,
+                    {
+                        "name": _("Commission retained for %s") % self.name,
+                        "quantity": 1.0,
+                        "price_unit": self.total_commission,
+                        "account_id": self._get_commission_income_account().id,
+                    },
+                ),
+            ],
+        })
+        move.action_post()
+        return move
+
+    def _create_commission_clearing_entry(self):
+        self.ensure_one()
+        bill = self.vendor_bill_id
+        invoice = self.commission_invoice_id
+        if not bill or not invoice:
+            raise UserError(_("Create the vendor bill and commission invoice before clearing commission."))
+
+        payable_account = self.vendor_id.property_account_payable_id
+        receivable_account = self.vendor_id.property_account_receivable_id
+        if not payable_account or not receivable_account:
+            raise UserError(_("Please configure payable and receivable accounts on vendor %s.") % self.vendor_id.display_name)
+
+        amount = min(self.total_commission, bill.amount_residual, invoice.amount_residual)
+        if not amount:
+            return False
+
+        move = self.env["account.move"].create({
+            "move_type": "entry",
+            "date": fields.Date.context_today(self),
+            "journal_id": self._get_statement_clearing_journal().id,
+            "company_id": self.company_id.id,
+            "ref": _("Commission clearing for %s") % self.name,
+            "line_ids": [
+                (
+                    0,
+                    0,
+                    {
+                        "name": _("Commission offset against vendor payable %s") % self.name,
+                        "partner_id": self.vendor_id.id,
+                        "account_id": payable_account.id,
+                        "debit": amount,
+                        "credit": 0.0,
+                    },
+                ),
+                (
+                    0,
+                    0,
+                    {
+                        "name": _("Commission invoice paid by retention %s") % self.name,
+                        "partner_id": self.vendor_id.id,
+                        "account_id": receivable_account.id,
+                        "debit": 0.0,
+                        "credit": amount,
+                    },
+                ),
+            ],
+        })
+        move.action_post()
+
+        bill_lines = bill.line_ids.filtered(
+            lambda line: line.account_id == payable_account and not line.reconciled
+        )
+        clearing_payable = move.line_ids.filtered(
+            lambda line: line.account_id == payable_account and not line.reconciled
+        )
+        if bill_lines and clearing_payable:
+            (bill_lines + clearing_payable).reconcile()
+
+        invoice_lines = invoice.line_ids.filtered(
+            lambda line: line.account_id == receivable_account and not line.reconciled
+        )
+        clearing_receivable = move.line_ids.filtered(
+            lambda line: line.account_id == receivable_account and not line.reconciled
+        )
+        if invoice_lines and clearing_receivable:
+            (invoice_lines + clearing_receivable).reconcile()
+
+        invoice.invalidate_recordset(["amount_residual", "payment_state"])
+        bill.invalidate_recordset(["amount_residual", "payment_state"])
+        return move
 
     def action_export_csv(self):
         self.ensure_one()
@@ -563,7 +717,7 @@ class MwanzoVendorStatementLine(models.Model):
             line.discount_amount = max(list_amount - sale_amount, 0.0)
             line.vat_amount = sale_amount * vat_rate / 100.0
             gross_amount = sale_amount + line.vat_amount
-            line.commission_amount = gross_amount * commission_percentage / 100.0
+            line.commission_amount = sale_amount * commission_percentage / 100.0
             line.net_amount = gross_amount - line.commission_amount
 
     @api.onchange("sale_amount", "commission_percentage", "vat_rate")
@@ -647,7 +801,7 @@ class MwanzoVendorSettlementWizard(models.TransientModel):
                 vat_amount = (line.price_subtotal_incl or 0.0) - sale_amount
                 commission_percentage = line.mwanzo_commission_percentage or 0.0
                 gross_amount = sale_amount + vat_amount
-                commission_amount = gross_amount * commission_percentage / 100.0
+                commission_amount = sale_amount * commission_percentage / 100.0
                 net_amount = gross_amount - commission_amount
                 line_vals.append(
                     (

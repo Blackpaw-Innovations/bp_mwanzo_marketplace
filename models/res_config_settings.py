@@ -35,6 +35,31 @@ class ResConfigSettings(models.TransientModel):
         readonly=False,
         string="Default Payment Methods",
     )
+    mwanzo_vendor_bill_journal_id = fields.Many2one(
+        related="company_id.mwanzo_vendor_bill_journal_id",
+        readonly=False,
+        string="Vendor Settlement Bill Journal",
+    )
+    mwanzo_commission_invoice_journal_id = fields.Many2one(
+        related="company_id.mwanzo_commission_invoice_journal_id",
+        readonly=False,
+        string="Commission Invoice Journal",
+    )
+    mwanzo_commission_clearing_journal_id = fields.Many2one(
+        related="company_id.mwanzo_commission_clearing_journal_id",
+        readonly=False,
+        string="Commission Clearing Journal",
+    )
+    mwanzo_vendor_payout_account_id = fields.Many2one(
+        related="company_id.mwanzo_vendor_payout_account_id",
+        readonly=False,
+        string="Vendor Payout Expense Account",
+    )
+    mwanzo_commission_income_account_id = fields.Many2one(
+        related="company_id.mwanzo_commission_income_account_id",
+        readonly=False,
+        string="Commission Income Account",
+    )
 
     module_bp_mwanzo_marketplace_hr = fields.Boolean(
         string="HR & Performance add-on",

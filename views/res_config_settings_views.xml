@@ -33,6 +33,23 @@
                             <field name="mwanzo_pos_payment_method_ids" widget="many2many_tags"/>
                         </setting>
                     </block>
+                    <block title="Vendor Settlement Accounting" name="mwanzo_settlement_accounting">
+                        <setting id="mwanzo_vendor_bill_journal" help="Purchase journal used for vendor payout bills.">
+                            <field name="mwanzo_vendor_bill_journal_id"/>
+                        </setting>
+                        <setting id="mwanzo_commission_invoice_journal" help="Sales journal used for commission invoices issued to vendors.">
+                            <field name="mwanzo_commission_invoice_journal_id"/>
+                        </setting>
+                        <setting id="mwanzo_commission_clearing_journal" help="General journal used to clear commission invoices against vendor payables.">
+                            <field name="mwanzo_commission_clearing_journal_id"/>
+                        </setting>
+                        <setting id="mwanzo_vendor_payout_account" help="Expense account used on vendor payout bills.">
+                            <field name="mwanzo_vendor_payout_account_id"/>
+                        </setting>
+                        <setting id="mwanzo_commission_income_account" help="Income account used on vendor commission invoices.">
+                            <field name="mwanzo_commission_income_account_id"/>
+                        </setting>
+                    </block>
                 </app>
             </xpath>
         </field>

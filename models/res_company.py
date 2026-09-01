@@ -20,3 +20,28 @@ class ResCompany(models.Model):
     mwanzo_pos_journal_id = fields.Many2one("account.journal", string="Sales Journal", domain=[("type", "=", "sale")])
     mwanzo_pos_invoice_journal_id = fields.Many2one("account.journal", string="Invoice Journal", domain=[("type", "=", "sale")])
     mwanzo_pos_payment_method_ids = fields.Many2many("pos.payment.method", string="Payment Methods")
+    mwanzo_vendor_bill_journal_id = fields.Many2one(
+        "account.journal",
+        string="Vendor Settlement Bill Journal",
+        domain=[("type", "=", "purchase")],
+    )
+    mwanzo_commission_invoice_journal_id = fields.Many2one(
+        "account.journal",
+        string="Commission Invoice Journal",
+        domain=[("type", "=", "sale")],
+    )
+    mwanzo_commission_clearing_journal_id = fields.Many2one(
+        "account.journal",
+        string="Commission Clearing Journal",
+        domain=[("type", "=", "general")],
+    )
+    mwanzo_vendor_payout_account_id = fields.Many2one(
+        "account.account",
+        string="Vendor Payout Expense Account",
+        domain=[("account_type", "=", "expense"), ("deprecated", "=", False)],
+    )
+    mwanzo_commission_income_account_id = fields.Many2one(
+        "account.account",
+        string="Commission Income Account",
+        domain=[("account_type", "in", ("income", "income_other")), ("deprecated", "=", False)],
+    )

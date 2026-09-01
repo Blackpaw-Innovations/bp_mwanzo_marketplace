@@ -257,7 +257,7 @@
                             class="btn-primary" 
                             invisible="id"/>
                     <button name="action_confirm" type="object" string="Confirm" invisible="state != 'draft'" class="btn-primary"/>
-                    <button name="action_create_vendor_bill" type="object" string="Create Vendor Bill" invisible="state != 'confirmed'" class="btn-secondary"/>
+                    <button name="action_create_vendor_bill" type="object" string="Create Accounting" invisible="state != 'confirmed'" class="btn-secondary"/>
                     <button name="action_open_export_wizard" type="object" string="Export" class="btn-secondary" invisible="not id"/>
                     <button name="%(bp_mwanzo_marketplace.action_report_mwanzo_vendor_statement)d" type="action" string="Print" class="btn-secondary"/>
                     <field name="stage_id" invisible="1"/>
@@ -274,6 +274,8 @@
                             <field name="date_from"/>
                             <field name="date_to"/>
                             <field name="vendor_bill_id" context="{'default_move_type': 'in_invoice'}"/>
+                            <field name="commission_invoice_id" context="{'default_move_type': 'out_invoice'}"/>
+                            <field name="commission_clearing_move_id"/>
                         </group>
                     </group>
                     <notebook>
