@@ -1,6 +1,7 @@
 import base64
 import csv
 import io
+from datetime import timedelta
 import xlsxwriter
 
 from odoo import _, api, fields, models
@@ -84,6 +85,28 @@ class MwanzoSettlementRun(models.Model):
             }
         }
 
+    def action_recompute_statements(self):
+        self.ensure_one()
+        if self.state != "draft":
+            raise UserError(_("Only draft settlement runs can be recomputed."))
+        wizard = self.env["mwanzo.vendor.settlement.wizard"].create({
+            "date_from": self.date_start,
+            "date_to": self.date_end,
+            "settlement_run_id": self.id,
+        })
+        return wizard.action_generate_statements()
+
+    def action_open_statements(self):
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Vendor Statements"),
+            "res_model": "mwanzo.vendor.statement",
+            "view_mode": "tree,form",
+            "domain": [("settlement_run_id", "=", self.id)],
+            "context": {"default_settlement_run_id": self.id},
+        }
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -136,9 +159,7 @@ class MwanzoVendorStatement(models.Model):
     name = fields.Char(
         readonly=True,
         copy=False,
-        default=lambda self: self.env["ir.sequence"].next_by_code(
-            "mwanzo.vendor.statement"
-        ),
+        default=lambda self: _("New"),
     )
     vendor_id = fields.Many2one("res.partner", required=True)
     date_from = fields.Date(required=True)
@@ -216,7 +237,14 @@ class MwanzoVendorStatement(models.Model):
             stage = self.env['mwanzo.vendor.statement.stage'].browse(vals['stage_id'])
             if stage.target_state:
                 vals['state'] = stage.target_state
-        return super().write(vals)
+        result = super().write(vals)
+        if vals.get("state") in ("confirmed", "invoiced", "paid"):
+            self._assign_statement_name()
+        return result
+
+    def _assign_statement_name(self):
+        for statement in self.filtered(lambda rec: not rec.name or rec.name == _("New")):
+            statement.name = self.env["ir.sequence"].next_by_code("mwanzo.vendor.statement") or _("New")
 
     def _update_stage_from_state(self):
         for record in self:
@@ -251,8 +279,118 @@ class MwanzoVendorStatement(models.Model):
 
     def action_confirm(self):
         for rec in self:
+            rec._assign_statement_name()
             rec.state = "confirmed"
             rec._update_stage_from_state()
+
+    def action_recompute_lines(self):
+        for statement in self:
+            if statement.state in ("invoiced", "paid"):
+                raise UserError(_("You cannot recompute an invoiced or paid statement. Create an adjustment statement instead."))
+            statement._recompute_statement_lines()
+            if statement.state == "confirmed":
+                statement.state = "draft"
+                statement._update_stage_from_state()
+        return True
+
+    def _recompute_statement_lines(self):
+        self.ensure_one()
+        existing_pos_lines = self.line_ids.mapped("pos_order_line_ids") | self.line_ids.mapped("pos_order_line_id")
+        existing_pos_lines = existing_pos_lines.filtered(lambda line: line)
+        pos_lines = self._get_settlement_pos_lines(
+            self.date_from,
+            self.date_to,
+            vendor=self.vendor_id,
+        )
+        pos_lines = pos_lines.filtered(
+            lambda line: not line.mwanzo_vendor_statement_line_id
+            or line.mwanzo_vendor_statement_line_id.statement_id == self
+        )
+        pos_lines |= existing_pos_lines
+        existing_pos_lines.write({"mwanzo_vendor_statement_line_id": False})
+        self.line_ids.unlink()
+        self._create_grouped_statement_lines(pos_lines)
+
+    @api.model
+    def _get_settlement_pos_lines(self, date_from, date_to, vendor=False, themes=False):
+        domain = [
+            ("order_id.date_order", ">=", date_from),
+            ("order_id.date_order", "<", fields.Date.to_date(date_to) + timedelta(days=1)),
+            ("order_id.state", "in", ("paid", "done", "invoiced")),
+            ("mwanzo_vendor_statement_line_id", "=", False),
+        ]
+        if themes:
+            domain.append(("mwanzo_theme_id", "in", themes.ids))
+        pos_lines = self.env["pos.order.line"].search(domain, order="id")
+        self._backfill_mwanzo_pos_line_data(pos_lines)
+        if vendor:
+            pos_lines = pos_lines.filtered(lambda line: line.mwanzo_vendor_id == vendor)
+        if themes:
+            pos_lines = pos_lines.filtered(lambda line: line.mwanzo_theme_id in themes)
+        return pos_lines.filtered("mwanzo_vendor_id")
+
+    @api.model
+    def _backfill_mwanzo_pos_line_data(self, pos_lines):
+        for line in pos_lines:
+            vals = {}
+            product = line.product_id
+            if not line.mwanzo_vendor_id and product.mwanzo_vendor_id:
+                vals["mwanzo_vendor_id"] = product.mwanzo_vendor_id.id
+            if not line.mwanzo_theme_id:
+                theme = line.order_id.session_id.config_id.mwanzo_theme_id or product.mwanzo_theme_id
+                if theme:
+                    vals["mwanzo_theme_id"] = theme.id
+            if not line.mwanzo_commission_percentage and product:
+                vals["mwanzo_commission_percentage"] = product._get_mwanzo_commission_percentage()
+            if vals:
+                line.write(vals)
+
+    def _create_grouped_statement_lines(self, pos_lines):
+        self.ensure_one()
+        groups = {}
+        for pos_line in pos_lines:
+            sale_amount = pos_line.price_subtotal or 0.0
+            collected_amount = pos_line.price_subtotal_incl or 0.0
+            vat_amount = collected_amount - sale_amount
+            vat_rate = (vat_amount / sale_amount * 100.0) if sale_amount else 0.0
+            key = (
+                pos_line.product_id.id,
+                pos_line.mwanzo_theme_id.id or False,
+            )
+            groups.setdefault(key, self.env["pos.order.line"])
+            groups[key] |= pos_line
+
+        for grouped_lines in groups.values():
+            first_line = grouped_lines[0]
+            sale_amount = sum(grouped_lines.mapped("price_subtotal"))
+            collected_amount = sum(grouped_lines.mapped("price_subtotal_incl"))
+            vat_amount = collected_amount - sale_amount
+            vat_rate = (vat_amount / sale_amount * 100.0) if sale_amount else 0.0
+            commission_amount = sum(
+                (line.price_subtotal or 0.0) * (line.mwanzo_commission_percentage or 0.0) / 100.0
+                for line in grouped_lines
+            )
+            commission_percentage = (commission_amount / sale_amount * 100.0) if sale_amount else 0.0
+            statement_line = self.env["mwanzo.vendor.statement.line"].create({
+                "statement_id": self.id,
+                "pos_order_line_id": first_line.id,
+                "pos_order_line_ids": [(6, 0, grouped_lines.ids)],
+                "product_id": first_line.product_id.id,
+                "theme_id": first_line.mwanzo_theme_id.id,
+                "commission_percentage": commission_percentage,
+                "quantity": sum(grouped_lines.mapped("qty")),
+                "collected_amount": collected_amount,
+                "sale_amount": sale_amount,
+                "vat_rate": vat_rate,
+                "vat_amount": vat_amount,
+                "commission_amount": commission_amount,
+                "discount_amount": sum(
+                    max((line.price_unit or 0.0) * (line.qty or 0.0) - (line.price_subtotal or 0.0), 0.0)
+                    for line in grouped_lines
+                ),
+                "net_amount": collected_amount - commission_amount,
+            })
+            grouped_lines.write({"mwanzo_vendor_statement_line_id": statement_line.id})
 
     def action_create_vendor_bill(self):
         for statement in self:
@@ -644,38 +782,40 @@ class MwanzoVendorStatementLine(models.Model):
     date_from = fields.Date(related="statement_id.date_from", store=True, readonly=True)
     date_to = fields.Date(related="statement_id.date_to", store=True, readonly=True)
     pos_order_line_id = fields.Many2one("pos.order.line", required=True)
+    pos_order_line_ids = fields.One2many(
+        "pos.order.line",
+        "mwanzo_vendor_statement_line_id",
+        string="POS Lines",
+        readonly=True,
+    )
     product_id = fields.Many2one(
         "product.product",
-        related="pos_order_line_id.product_id",
         store=True,
         readonly=True,
     )
     theme_id = fields.Many2one(
         "mwanzo.market.theme",
-        related="pos_order_line_id.mwanzo_theme_id",
         store=True,
         readonly=True,
     )
     commission_percentage = fields.Float(string="Commission %")
-    quantity = fields.Float(string="Quantity", related="pos_order_line_id.qty", store=True, readonly=True)
+    quantity = fields.Float(string="Quantity", readonly=True)
     quantity_remaining = fields.Float(string="Qty Left", compute="_compute_quantity_remaining", readonly=True)
     collected_amount = fields.Monetary(
         string="Collected",
-        compute="_compute_pricing_amounts",
         store=True,
         readonly=True,
     )
     discount_amount = fields.Monetary(
         string="Discount",
-        compute="_compute_pricing_amounts",
         store=True,
         readonly=True,
     )
-    vat_rate = fields.Float(string="VAT %", compute="_compute_vat_rate", inverse="_inverse_vat_rate", store=True)
-    vat_amount = fields.Monetary(string="VAT", compute="_compute_pricing_amounts", store=True, readonly=True)
+    vat_rate = fields.Float(string="VAT %", store=True, readonly=True)
+    vat_amount = fields.Monetary(string="VAT", store=True, readonly=True)
     sale_amount = fields.Monetary(string="Sales Excl.")
-    commission_amount = fields.Monetary(string="Commission", compute="_compute_pricing_amounts", store=True, readonly=True)
-    net_amount = fields.Monetary(string="Payable", compute="_compute_pricing_amounts", store=True, readonly=True)
+    commission_amount = fields.Monetary(string="Commission", store=True, readonly=True)
+    net_amount = fields.Monetary(string="Payable", store=True, readonly=True)
     currency_id = fields.Many2one(
         "res.currency",
         related="statement_id.currency_id",
@@ -688,41 +828,9 @@ class MwanzoVendorStatementLine(models.Model):
         for line in self:
             line.quantity_remaining = line.product_id.qty_available or 0.0
 
-    @api.depends("pos_order_line_id.price_subtotal", "pos_order_line_id.price_subtotal_incl")
-    def _compute_vat_rate(self):
-        for line in self:
-            subtotal = line.pos_order_line_id.price_subtotal or 0.0
-            tax_amount = (line.pos_order_line_id.price_subtotal_incl or 0.0) - subtotal
-            line.vat_rate = (tax_amount / subtotal * 100.0) if subtotal else 0.0
-
-    def _inverse_vat_rate(self):
-        # Keep the manually entered value; the amount fields react through onchange/compute.
-        return
-
-    @api.depends(
-        "sale_amount",
-        "commission_percentage",
-        "vat_rate",
-        "pos_order_line_id.price_subtotal_incl",
-        "pos_order_line_id.price_unit",
-        "pos_order_line_id.qty",
-    )
-    def _compute_pricing_amounts(self):
-        for line in self:
-            sale_amount = line.sale_amount or 0.0
-            commission_percentage = line.commission_percentage or 0.0
-            vat_rate = line.vat_rate or 0.0
-            list_amount = (line.pos_order_line_id.price_unit or 0.0) * (line.pos_order_line_id.qty or 0.0)
-            line.collected_amount = line.pos_order_line_id.price_subtotal_incl or 0.0
-            line.discount_amount = max(list_amount - sale_amount, 0.0)
-            line.vat_amount = sale_amount * vat_rate / 100.0
-            gross_amount = sale_amount + line.vat_amount
-            line.commission_amount = sale_amount * commission_percentage / 100.0
-            line.net_amount = gross_amount - line.commission_amount
-
-    @api.onchange("sale_amount", "commission_percentage", "vat_rate")
-    def _onchange_pricing_amounts(self):
-        self._compute_pricing_amounts()
+    def unlink(self):
+        self.mapped("pos_order_line_ids").write({"mwanzo_vendor_statement_line_id": False})
+        return super().unlink()
 
 
 class MwanzoVendorStatementExportWizard(models.TransientModel):
@@ -753,79 +861,86 @@ class MwanzoVendorSettlementWizard(models.TransientModel):
     theme_ids = fields.Many2many("mwanzo.market.theme", string="Themes")
     settlement_run_id = fields.Many2one("mwanzo.settlement.run", string="Settlement Run")
 
-    def action_generate_statements(self):
+    def _get_existing_matching_statements(self):
         self.ensure_one()
         domain = [
-            ("order_id.date_order", ">=", self.date_from),
-            ("order_id.date_order", "<=", self.date_to),
-            ("mwanzo_vendor_id", "!=", False),
+            ("date_from", "<=", self.date_to),
+            ("date_to", ">=", self.date_from),
         ]
         if self.vendor_id:
-            domain.append(("mwanzo_vendor_id", "=", self.vendor_id.id))
+            domain.append(("vendor_id", "=", self.vendor_id.id))
+        statements = self.env["mwanzo.vendor.statement"].search(domain, order="name")
         if self.theme_ids:
-            domain.append(("mwanzo_theme_id", "in", self.theme_ids.ids))
+            statements = statements.filtered(
+                lambda statement: bool(statement.line_ids.filtered(lambda line: line.theme_id in self.theme_ids))
+            )
+        return statements
 
-        pos_lines = self.env["pos.order.line"].search(domain)
-        if not pos_lines:
-            raise UserError(_("No POS order lines found for the given filters."))
-
-        vendors = pos_lines.mapped("mwanzo_vendor_id")
-        statements = self.env["mwanzo.vendor.statement"]
-        
-        # If running from a settlement run, check for existing statements
-        existing_vendors = set()
-        if self.settlement_run_id:
-            existing_statements = self.env["mwanzo.vendor.statement"].search([
-                ("settlement_run_id", "=", self.settlement_run_id.id)
-            ])
-            existing_vendors = set(existing_statements.mapped("vendor_id.id"))
-
-        for vendor in vendors:
-            if vendor.id in existing_vendors:
-                continue # Skip if already exists in this run
-
-            vendor_lines = pos_lines.filtered(lambda l: l.mwanzo_vendor_id == vendor)
-            statement_vals = {
-                "vendor_id": vendor.id,
-                "date_from": self.date_from,
-                "date_to": self.date_to,
-                "company_id": self.env.company.id,
-            }
-            if self.settlement_run_id:
-                statement_vals["settlement_run_id"] = self.settlement_run_id.id
-            
-            statement = statements.create(statement_vals)
-            line_vals = []
-            for line in vendor_lines:
-                sale_amount = line.price_subtotal
-                vat_amount = (line.price_subtotal_incl or 0.0) - sale_amount
-                commission_percentage = line.mwanzo_commission_percentage or 0.0
-                gross_amount = sale_amount + vat_amount
-                commission_amount = sale_amount * commission_percentage / 100.0
-                net_amount = gross_amount - commission_amount
-                line_vals.append(
-                    (
-                        0,
-                        0,
-                        {
-                            "pos_order_line_id": line.id,
-                            "commission_percentage": commission_percentage,
-                            "sale_amount": sale_amount,
-                            "commission_amount": commission_amount,
-                            "net_amount": net_amount,
-                        },
-                    )
-                )
-            statement.write({"line_ids": line_vals})
-            statements |= statement
-        
-        if self.settlement_run_id:
-            return {'type': 'ir.actions.act_window_close'}
-
+    def _action_open_statements(self, statements, name=None):
         return {
             "type": "ir.actions.act_window",
-            "name": _("Vendor Statements"),
+            "name": name or _("Vendor Statements"),
             "res_model": "mwanzo.vendor.statement",
             "view_mode": "tree,form",
             "domain": [("id", "in", statements.ids)],
         }
+
+    def action_generate_statements(self):
+        self.ensure_one()
+        pos_lines = self.env["mwanzo.vendor.statement"]._get_settlement_pos_lines(
+            self.date_from,
+            self.date_to,
+            vendor=self.vendor_id,
+            themes=self.theme_ids,
+        )
+        if not pos_lines:
+            existing_statements = self._get_existing_matching_statements()
+            if existing_statements:
+                return self._action_open_statements(
+                    existing_statements,
+                    _("Existing Vendor Statements"),
+                )
+            raise UserError(
+                _(
+                    "No unsettled POS order lines found for the given filters. "
+                    "Matching sales may already be linked to vendor statements."
+                )
+            )
+
+        vendors = pos_lines.mapped("mwanzo_vendor_id")
+        statements = self.env["mwanzo.vendor.statement"]
+
+        for vendor in vendors:
+            vendor_lines = pos_lines.filtered(lambda l: l.mwanzo_vendor_id == vendor)
+            statement_domain = [
+                ("vendor_id", "=", vendor.id),
+                ("date_from", "=", self.date_from),
+                ("date_to", "=", self.date_to),
+                ("state", "in", ("draft", "confirmed")),
+            ]
+            if self.settlement_run_id:
+                statement_domain.append(("settlement_run_id", "=", self.settlement_run_id.id))
+            statement = statements.search(statement_domain, limit=1)
+            if statement and statement.state == "confirmed":
+                statement.state = "draft"
+                statement._update_stage_from_state()
+            if not statement:
+                statement_vals = {
+                    "vendor_id": vendor.id,
+                    "date_from": self.date_from,
+                    "date_to": self.date_to,
+                    "company_id": self.env.company.id,
+                }
+                if self.settlement_run_id:
+                    statement_vals["settlement_run_id"] = self.settlement_run_id.id
+                statement = statements.create(statement_vals)
+
+            existing_pos_lines = statement.line_ids.mapped("pos_order_line_ids") | statement.line_ids.mapped("pos_order_line_id")
+            existing_pos_lines = existing_pos_lines.filtered(lambda line: line)
+            combined_lines = existing_pos_lines | vendor_lines
+            existing_pos_lines.write({"mwanzo_vendor_statement_line_id": False})
+            statement.line_ids.unlink()
+            statement._create_grouped_statement_lines(combined_lines)
+            statements |= statement
+
+        return self._action_open_statements(statements)

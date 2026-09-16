@@ -53,6 +53,18 @@ class PosOrderLine(models.Model):
     mwanzo_vendor_id = fields.Many2one("res.partner")
     mwanzo_theme_id = fields.Many2one("mwanzo.market.theme")
     mwanzo_commission_percentage = fields.Float(digits=(16, 2))
+    mwanzo_vendor_statement_line_id = fields.Many2one(
+        "mwanzo.vendor.statement.line",
+        string="Mwanzo Statement Line",
+        readonly=True,
+        copy=False,
+    )
+    mwanzo_vendor_statement_id = fields.Many2one(
+        "mwanzo.vendor.statement",
+        related="mwanzo_vendor_statement_line_id.statement_id",
+        store=True,
+        readonly=True,
+    )
 
     @api.model
     def create(self, vals_list):

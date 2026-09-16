@@ -186,7 +186,7 @@
                         <table class="vendor-statement-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 12%;">POS Order Line</th>
+                                    <th style="width: 12%;">Sample POS Line</th>
                                     <th style="width: 10%;">Product</th>
                                     <th style="width: 12%;">Theme</th>
                                     <th style="width: 7%;" class="text-end">Qty</th>

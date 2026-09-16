@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class ProductTemplate(models.Model):
@@ -113,6 +114,17 @@ class ProductTemplate(models.Model):
             for variant in empty_variants:
                 variant.write({"barcode": self._generate_mwanzo_ean13_barcode()})
         return True
+
+    @api.constrains("sale_ok", "available_in_pos", "mwanzo_vendor_id")
+    def _check_mwanzo_vendor_required(self):
+        for product in self:
+            if (product.sale_ok or product.available_in_pos) and not product.mwanzo_vendor_id:
+                raise ValidationError(
+                    _(
+                        "Please set a Mwanzo Vendor before saving product '%s'.",
+                        product.display_name,
+                    )
+                )
 
     @api.model
     def _cron_backfill_empty_barcodes(self):

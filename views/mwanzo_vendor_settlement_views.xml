@@ -59,6 +59,8 @@
             <form>
                 <header>
                     <button name="action_open_wizard" string="Generate Statements" type="object" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_recompute_statements" string="Recompute Statements" type="object" class="btn-secondary" invisible="state != 'draft'"/>
+                    <button name="action_open_statements" string="View Statements" type="object" class="btn-secondary"/>
                     <button name="action_close" string="Close" type="object" class="btn-secondary" invisible="state != 'draft'"/>
                     <button name="action_draft" string="Set to Draft" type="object" class="btn-secondary" invisible="state != 'closed'"/>
                     <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
@@ -257,6 +259,7 @@
                             class="btn-primary" 
                             invisible="id"/>
                     <button name="action_confirm" type="object" string="Confirm" invisible="state != 'draft'" class="btn-primary"/>
+                    <button name="action_recompute_lines" type="object" string="Recompute" invisible="state not in ('draft', 'confirmed')" class="btn-secondary"/>
                     <button name="action_create_vendor_bill" type="object" string="Create Accounting" invisible="state != 'confirmed'" class="btn-secondary"/>
                     <button name="action_open_export_wizard" type="object" string="Export" class="btn-secondary" invisible="not id"/>
                     <button name="%(bp_mwanzo_marketplace.action_report_mwanzo_vendor_statement)d" type="action" string="Print" class="btn-secondary"/>
@@ -282,7 +285,7 @@
                         <page string="Order Lines">
                             <field name="line_ids" readonly="1">
                                 <tree create="false" delete="false" edit="false">
-                                    <field name="pos_order_line_id"/>
+                                    <field name="pos_order_line_id" optional="hide"/>
                                     <field name="product_id"/>
                                     <field name="theme_id"/>
                                     <field name="quantity"/>
